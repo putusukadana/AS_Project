@@ -1,13 +1,14 @@
 <script setup>
 import { ref } from 'vue'
-import axios from 'axios'
+import { useRouter } from 'vue-router'
+import authService from '../services/auth-service'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
 import Password from 'primevue/password'
 import Card from 'primevue/card'
 import Message from 'primevue/message'
 
-const emit = defineEmits(['toggleView'])
+const router = useRouter()
 
 const email = ref('')
 const password = ref('')
@@ -15,22 +16,21 @@ const error = ref('')
 const success = ref('')
 const loading = ref(false)
 
-const login = async () => {
+const handleLogin = async () => {
   loading.value = true
   error.value = ''
   success.value = ''
   try {
-    const response = await axios.post('http://localhost:8000/api/v1/users/login', {
+    const data = await authService.login({
       email: email.value,
       password: password.value
     })
-    const { message, data } = response.data
-    // For this boilerplate, we'll store the object ID or email
-    localStorage.setItem('user', JSON.stringify(data))
-    success.value = message || 'Login successful!'
-    console.log('User logged in:', data)
+    
+    localStorage.setItem('user', JSON.stringify(data.data))
+    success.value = data.message || 'Login successful!'
+    console.log('User logged in:', data.data)
   } catch (err) {
-    error.value = err.response?.data?.detail?.message || 'An error occurred during login.'
+    error.value = err
   } finally {
     loading.value = false
   }
@@ -44,7 +44,7 @@ const login = async () => {
         <h2 class="text-2xl font-bold text-center text-slate-800">AS Project - Welcome Back</h2>
       </template>
       <template #content>
-        <form @submit.prevent="login" class="flex flex-col gap-4">
+        <form @submit.prevent="handleLogin" class="flex flex-col gap-4">
           <div class="flex flex-col gap-2">
             <label for="email" class="text-sm font-medium text-slate-600">Email Address</label>
             <InputText id="email" type="email" v-model="email" placeholder="Enter your email" class="w-full" required />
@@ -60,7 +60,7 @@ const login = async () => {
         
         <div class="mt-6 text-center text-sm text-slate-600">
           Don't have an account? 
-          <a @click.prevent="$emit('toggleView')" href="#" class="text-blue-600 hover:underline font-semibold">Register here</a>
+          <router-link to="/register" class="text-blue-600 hover:underline font-semibold">Register here</router-link>
         </div>
       </template>
     </Card>

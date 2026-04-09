@@ -1,21 +1,14 @@
 <script setup>
-import { ref } from 'vue'
-import Login from './views/Login.vue'
-import Register from './views/Register.vue'
-
-const currentView = ref('login')
-
-const toggleView = () => {
-  currentView.value = currentView.value === 'login' ? 'register' : 'login'
-}
+// Main layout component using router-view
 </script>
 
 <template>
   <div class="h-screen w-screen m-0 p-0 overflow-hidden font-sans">
-    <Transition name="fade" mode="out-in">
-      <Login v-if="currentView === 'login'" @toggleView="toggleView" />
-      <Register v-else @toggleView="toggleView" />
-    </Transition>
+    <router-view v-slot="{ Component }">
+      <transition name="fade" mode="out-in">
+        <component :is="Component" />
+      </transition>
+    </router-view>
   </div>
 </template>
 
