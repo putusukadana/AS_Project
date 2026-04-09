@@ -1,13 +1,14 @@
 <script setup>
 import { ref } from 'vue'
-import axios from 'axios'
+import { useRouter } from 'vue-router'
+import authService from '../services/auth-service'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
 import Password from 'primevue/password'
 import Card from 'primevue/card'
 import Message from 'primevue/message'
 
-const emit = defineEmits(['toggleView'])
+const router = useRouter()
 
 const username = ref('')
 const email = ref('')
@@ -16,21 +17,21 @@ const error = ref('')
 const success = ref('')
 const loading = ref(false)
 
-const register = async () => {
+const handleRegister = async () => {
   loading.value = true
   error.value = ''
   success.value = ''
   try {
-    const response = await axios.post('http://localhost:8000/api/v1/users', {
+    const data = await authService.register({
       username: username.value,
       email: email.value,
       password: password.value
     })
-    success.value = response.data.message || 'User created successfully'
-    // Optionally switch to login view after success delay
-    setTimeout(() => emit('toggleView'), 3000)
+    success.value = data.message || 'User created successfully'
+    // Automatically redirect to login after success
+    setTimeout(() => router.push('/login'), 2000)
   } catch (err) {
-    error.value = err.response?.data?.detail?.message || 'An error occurred during registration.'
+    error.value = err
   } finally {
     loading.value = false
   }
@@ -44,7 +45,7 @@ const register = async () => {
         <h2 class="text-2xl font-bold text-center text-slate-800">AS Project - Create Account</h2>
       </template>
       <template #content>
-        <form @submit.prevent="register" class="flex flex-col gap-4">
+        <form @submit.prevent="handleRegister" class="flex flex-col gap-4">
           <div class="flex flex-col gap-2">
             <label for="username" class="text-sm font-medium text-slate-600">Username</label>
             <InputText id="username" v-model="username" placeholder="Enter your username" class="w-full" required />
@@ -65,7 +66,7 @@ const register = async () => {
         
         <div class="mt-6 text-center text-sm text-slate-600">
           Already have an account? 
-          <a @click.prevent="$emit('toggleView')" href="#" class="text-blue-600 hover:underline font-semibold">Login here</a>
+          <router-link to="/login" class="text-blue-600 hover:underline font-semibold">Login here</router-link>
         </div>
       </template>
     </Card>
