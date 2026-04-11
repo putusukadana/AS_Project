@@ -33,6 +33,14 @@ def read_root():
 # Include Routers
 app.include_router(user_router)
 
+from routes.crawl_routes import router as crawl_router
+from routes.pipeline_routes import router as pipeline_router
+from routes.analysis_routes import router as analysis_router
+
+app.include_router(crawl_router)
+app.include_router(pipeline_router)
+app.include_router(analysis_router)
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)

@@ -4,7 +4,7 @@ from motor.motor_asyncio import AsyncIOMotorCollection
 import logging
 
 from models import UserRegistration, UserLogin, UserResponse, APIResponse
-from auth import get_password_hash, verify_password
+from auth import get_password_hash, verify_password, create_access_token
 
 logger = logging.getLogger(__name__)
 
@@ -52,11 +52,16 @@ async def login_user(users_collection: AsyncIOMotorCollection, user_credentials:
         logger.warning(f"Failed login attempt for email: {user_credentials.email}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail={"message": "User not found", "error": "Bad Request"}
+            detail={"message": "Invalid email or password", "error": "Bad Request"}
         )
+    
+    # Generate Access Token
+    access_token = create_access_token(data={"sub": user["email"]})
     
     logger.info(f"User Logged In: {user['email']}")
     return APIResponse(
         message="User logged in successfully",
-        data=format_user_response(user)
+        data=format_user_response(user),
+        access_token=access_token,
+        token_type="bearer"
     )
