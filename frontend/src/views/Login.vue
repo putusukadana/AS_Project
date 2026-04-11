@@ -26,9 +26,17 @@ const handleLogin = async () => {
       password: password.value
     })
     
+    // Store token and user data
+    localStorage.setItem('token', data.access_token)
     localStorage.setItem('user', JSON.stringify(data.data))
-    success.value = data.message || 'Login successful!'
-    console.log('User logged in:', data.data)
+    
+    success.value = 'Login successful! Redirecting...'
+    
+    // Redirect after a short delay
+    setTimeout(() => {
+      router.push('/dashboard')
+    }, 1000)
+    
   } catch (err) {
     error.value = err
   } finally {
