@@ -6,6 +6,12 @@ const routes = [
     path: '/',
     redirect: '/login'
   },
+  {
+    path: '/data-engine',
+    name: 'DataEngine',
+    component: () => import('@/views/DataEngine.vue'),
+    meta: { requiresAuth: true }
+  },
   ...authRoutes
 ]
 

@@ -1,10 +1,8 @@
-import axios from 'axios'
-
-const API_URL = 'http://localhost:8000/api/v1'
+import api from './api'
 
 const register = async (userData) => {
   try {
-    const response = await axios.post(`${API_URL}/users`, userData)
+    const response = await api.post('/users', userData)
     return response.data
   } catch (error) {
     throw error.response?.data?.detail?.message || 'An error occurred during registration.'
@@ -13,7 +11,7 @@ const register = async (userData) => {
 
 const login = async (credentials) => {
   try {
-    const response = await axios.post(`${API_URL}/users/login`, credentials)
+    const response = await api.post('/users/login', credentials)
     return response.data
   } catch (error) {
     throw error.response?.data?.detail?.message || 'An error occurred during login.'

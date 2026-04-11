@@ -24,6 +24,8 @@ class UserResponse(BaseModel):
 class APIResponse(BaseModel):
     message: str
     data: Optional[UserResponse] = None
+    access_token: Optional[str] = None
+    token_type: Optional[str] = None
     error: Optional[str] = None
 
 class Token(BaseModel):
