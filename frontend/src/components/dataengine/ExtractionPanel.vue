@@ -1,11 +1,25 @@
 <template>
   <section class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm shadow-slate-200/50">
-    <h2 class="text-xl font-bold text-slate-900 mb-6 flex items-center gap-2">
-      <span>⚙️</span> Extraction Parameters
-    </h2>
+    <div class="flex items-center justify-between mb-6">
+      <h2 class="text-xl font-bold text-slate-900 flex items-center gap-2">
+        <span>⚙️</span> Extraction Parameters
+      </h2>
+      <!-- Mode Switcher -->
+      <div class="flex bg-slate-100 p-1 rounded-xl">
+        <button 
+          v-for="mode in ['keyword', 'url']" 
+          :key="mode"
+          class="px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wider transition-all"
+          :class="extractionMode === mode ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'"
+          @click="extractionMode = mode"
+        >
+          {{ mode }}
+        </button>
+      </div>
+    </div>
 
     <!-- Pilih Platform -->
-    <div class="space-y-3">
+    <div class="space-y-3" :class="{ 'opacity-50 pointer-events-none': extractionMode === 'url' }">
       <label class="block text-sm font-bold text-slate-500 uppercase tracking-wider">Platform Sumber Data</label>
       <div class="flex flex-wrap gap-2">
         <button
@@ -23,12 +37,35 @@
       </div>
     </div>
 
-    <!-- Input Kata Kunci -->
+    <!-- Input Area -->
     <div class="mt-8 space-y-3">
-      <label for="keyword-input" class="block text-sm font-bold text-slate-500 uppercase tracking-wider">Kata Kunci Target</label>
+      <div class="flex items-center justify-between">
+        <label for="keyword-input" class="block text-sm font-bold text-slate-500 uppercase tracking-wider">
+          {{ extractionMode === 'keyword' ? 'Kata Kunci Target' : 'URL Video TikTok' }}
+        </label>
+        <span v-if="extractionMode === 'url'" class="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full uppercase tracking-tighter">
+          Max 10 URL
+        </span>
+      </div>
+      
       <div class="relative group">
-        <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors">🔍</span>
+        <span class="absolute left-4 top-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors">
+          {{ extractionMode === 'keyword' ? '🔍' : '🔗' }}
+        </span>
+
+        <!-- Textarea for Multiple URLs -->
+        <textarea
+          v-if="extractionMode === 'url'"
+          id="keyword-input"
+          v-model="keyword"
+          rows="4"
+          placeholder="https://www.tiktok.com/@user/video/123...&#10;https://vt.tiktok.com/ZS.../"
+          class="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder:text-slate-400 outline-none focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all font-medium text-sm resize-none"
+        ></textarea>
+
+        <!-- Standard Input for Keywords -->
         <input
+          v-else
           id="keyword-input"
           v-model="keyword"
           type="text"
@@ -36,6 +73,32 @@
           class="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder:text-slate-400 outline-none focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all font-medium"
           @keyup.enter="startCrawl"
         />
+      </div>
+      <p v-if="extractionMode === 'url'" class="text-[11px] text-slate-400 pl-1 font-medium italic">
+        * Gunakan baris baru atau koma untuk memisahkan beberapa URL.
+      </p>
+    </div>
+
+    <!-- Rentang Waktu -->
+    <div class="mt-8 space-y-3" :class="{ 'opacity-30 pointer-events-none': extractionMode === 'url' }">
+      <label class="block text-sm font-bold text-slate-500 uppercase tracking-wider">Rentang Waktu</label>
+      <div class="grid grid-cols-2 gap-4">
+        <div class="space-y-1.5">
+          <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest pl-1">Dari</span>
+          <input
+            v-model="startDate"
+            type="date"
+            class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 outline-none focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all text-sm font-medium"
+          />
+        </div>
+        <div class="space-y-1.5">
+          <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest pl-1">Hingga</span>
+          <input
+            v-model="endDate"
+            type="date"
+            class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 outline-none focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all text-sm font-medium"
+          />
+        </div>
       </div>
     </div>
 
@@ -82,14 +145,18 @@ const platforms = [
   { id: "facebook", icon: "👤", label: "Facebook" },
 ];
 
+const extractionMode = ref("keyword"); // 'keyword' | 'url'
 const selectedPlatforms = ref(["tiktok"]);
 const keyword = ref("");
+const startDate = ref("");
+const endDate = ref("");
 const isCrawling = ref(false);
 const crawlStatus = ref([]);
 
-const canCrawl = computed(
-  () => selectedPlatforms.value.length > 0 && keyword.value.trim().length > 0,
-);
+const canCrawl = computed(() => {
+  if (extractionMode.value === "url") return keyword.value.trim().includes("tiktok.com");
+  return selectedPlatforms.value.length > 0 && keyword.value.trim().length > 0;
+});
 
 const togglePlatform = (id) => {
   const idx = selectedPlatforms.value.indexOf(id);
@@ -106,8 +173,10 @@ const startCrawl = async () => {
   crawlStatus.value = [];
   try {
     await crawlStore.startCrawl({
-      platforms: selectedPlatforms.value,
+      platforms: extractionMode.value === 'url' ? ['tiktok'] : selectedPlatforms.value,
       keyword: keyword.value,
+      start_date: (extractionMode.value === 'keyword' && startDate.value) ? new Date(startDate.value).toISOString() : null,
+      end_date: (extractionMode.value === 'keyword' && endDate.value) ? new Date(endDate.value).toISOString() : null,
       onStatus: (log) => {
         crawlStatus.value.push(log);
       },
