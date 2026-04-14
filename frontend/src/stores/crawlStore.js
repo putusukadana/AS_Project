@@ -13,11 +13,16 @@ export const useCrawlStore = defineStore("crawl", () => {
   });
   const isAnalyzing = ref(false);
 
-  const startCrawl = async ({ platforms, keyword, onStatus }) => {
+  const startCrawl = async ({ platforms, keyword, start_date, end_date, onStatus }) => {
     onStatus({ type: "info", message: `🚀 Memulai crawl untuk: "${keyword}"` });
     try {
       // Endpoint: /api/v1/crawl/start
-      const res = await api.post("/crawl/start", { platforms, keyword });
+      const res = await api.post("/crawl/start", { 
+        platforms, 
+        keyword,
+        start_date: start_date || null,
+        end_date: end_date || null
+      });
       rawData.value = res.data.data;
       stats.value = { total: res.data.total, quality: res.data.signal_quality };
       onStatus({
