@@ -19,10 +19,11 @@ const stats = computed(() => crawlStore.stats);
 const rawData = computed(() => crawlStore.rawData);
 
 const pipelineSteps = computed(() => [
-  { id: "case_folding", icon: "🔡", label: "Case Folding", status: crawlStore.pipelineStatus.case_folding },
-  { id: "url_removal", icon: "🔗", label: "URL Removal", status: crawlStore.pipelineStatus.url_removal },
+  { id: "emoji_conversion", icon: "🎭", label: "Emoji Conversion", status: crawlStore.pipelineStatus.emoji_conversion },
+  { id: "cleansing", icon: "🧹", label: "Data Cleansing", status: crawlStore.pipelineStatus.cleansing },
+  { id: "normalization", icon: "📏", label: "Slang Normalization", status: crawlStore.pipelineStatus.normalization },
   { id: "stopwords", icon: "🚫", label: "Stopwords Removal", status: crawlStore.pipelineStatus.stopwords },
-  { id: "emotion", icon: "😊", label: "Emotion Detection", status: crawlStore.pipelineStatus.emotion },
+  { id: "sentiment_analysis", icon: "📊", label: "Sentiment Labeling", status: crawlStore.pipelineStatus.sentiment_analysis },
 ]);
 
 const runAnalysis = async () => {
