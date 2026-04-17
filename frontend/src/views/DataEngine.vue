@@ -25,14 +25,14 @@
                 untuk analisis emosi dan sentimen real-time.
               </p>
             </div>
-            <div class="flex gap-3">
+            <!-- <div class="flex gap-3">
               <button class="px-5 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl font-bold text-sm shadow-sm hover:bg-slate-50 transition-all">
                 Export Data
               </button>
               <button class="px-5 py-2.5 bg-indigo-600 text-white rounded-xl font-bold text-sm shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all">
                 History
               </button>
-            </div>
+            </div> -->
           </div>
 
           <!-- Component Grid -->

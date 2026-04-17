@@ -34,3 +34,16 @@ class Token(BaseModel):
 
 class TokenData(BaseModel):
     username: Optional[str] = None
+
+class ProcessedData(BaseModel):
+    raw_text: str
+    cleaned_text: str
+    score: float
+    label: str
+    platform: Optional[str] = "tiktok"
+    video_id: Optional[str] = None
+    author: Optional[str] = None
+    created_at: datetime = Field(default_factory=datetime.now)
+
+    class Config:
+        populate_by_name = True

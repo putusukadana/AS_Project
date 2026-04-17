@@ -107,9 +107,15 @@ const openPreview = (summary) => {
   if (!summary.sampleComments || summary.sampleComments.length === 0) return;
   
   const commentsHtml = summary.sampleComments.map(c => `
-    <tr style="border-bottom: 1px solid #f1f5f9;">
+    <tr style="border-bottom: 1px solid #f1f5f9; vertical-align: top;">
       <td style="padding: 12px; font-size: 13px; color: #1e293b; font-weight: 600; width: 120px;">@${c.user_unique_id || 'user'}</td>
-      <td style="padding: 12px; font-size: 13px; color: #475569;">${c.text}</td>
+      <td style="padding: 12px; font-size: 13px; color: #64748b; font-style: italic; background: #fcfcfc;">${c.raw_text || c.text || '-'}</td>
+      <td style="padding: 12px; font-size: 13px; color: #1e293b;">${c.text || '-'}</td>
+      <td style="padding: 12px; font-size: 12px; text-align: center;">
+        <span style="display: inline-block; padding: 2px 8px; border-radius: 4px; font-weight: bold; background: ${c.label === 'Positif' ? '#ecfdf5' : c.label === 'Negatif' ? '#fff1f2' : '#f8fafc'}; color: ${c.label === 'Positif' ? '#059669' : c.label === 'Negatif' ? '#e11d48' : '#64748b'}; border: 1px solid ${c.label === 'Positif' ? '#d1fae5' : c.label === 'Negatif' ? '#ffe4e6' : '#e2e8f0'};">
+          ${c.label || 'Belum Dinilai'}
+        </span>
+      </td>
     </tr>
   `).join('');
   
@@ -118,26 +124,32 @@ const openPreview = (summary) => {
     <html>
       <head>
         <title>Preview Komentar - ${summary.platform}</title>
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
         <style>
-          body { font-family: 'Inter', sans-serif; background: #f8fafc; color: #1e293b; padding: 40px; margin: 0; }
-          .container { max-width: 800px; margin: 0 auto; background: white; border-radius: 12px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); overflow: hidden; }
-          .header { padding: 24px; background: #000; color: white; }
-          .header h1 { margin: 0; font-size: 20px; }
-          .header p { margin: 4px 0 0; opacity: 0.7; font-size: 12px; }
+          body { font-family: 'Inter', sans-serif; background: #f8fafc; color: #1e293b; padding: 40px; margin: 0; line-height: 1.5; }
+          .container { max-width: 1000px; margin: 0 auto; background: white; border-radius: 20px; box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1); overflow: hidden; border: 1px solid #e2e8f0; }
+          .header { padding: 32px; background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: white; }
+          .header h1 { margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.025em; }
+          .header p { margin: 8px 0 0; opacity: 0.6; font-size: 13px; font-weight: 500; }
           table { width: 100%; border-collapse: collapse; }
-          th { background: #f1f5f9; text-align: left; padding: 12px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; }
+          th { background: #f8fafc; text-align: left; padding: 14px 12px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; border-bottom: 2px solid #f1f5f9; font-weight: 800; }
+          .label { font-size: 10px; font-weight: 900; }
         </style>
       </head>
       <body>
         <div class="container">
           <div class="header">
-            <h1>Preview 10 Komentar - ${summary.platform}</h1>
-            <p>Snapshot dari data yang berhasil diekstraksi</p>
+            <h1>Preview Analysis - ${summary.platform}</h1>
+            <p>Perbandingan Teks Asli vs Teks Bersih & Label Sentimen</p>
           </div>
           <table>
             <thead>
-              <tr><th>Username</th><th>Komentar</th></tr>
+              <tr>
+                <th>Username</th>
+                <th>Teks Asli (Raw)</th>
+                <th>Teks Bersih (Cleaned)</th>
+                <th style="text-align: center;">Sentimen</th>
+              </tr>
             </thead>
             <tbody>${commentsHtml}</tbody>
           </table>

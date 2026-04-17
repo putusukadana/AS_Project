@@ -2,7 +2,65 @@ import requests
 import datetime
 import time
 import re
+import os
 from typing import List, Dict, Any, Optional, Union
+from dotenv import load_dotenv
+
+load_dotenv()
+
+# --- Configuration & Global Rate Limiting ---
+RAPIDAPI_KEY = os.getenv("RAPIDAPI_KEY", "d501fae7bfmsh3f1de8ef5dc24d3p1d9ebejsnabaf8a976a3e")
+RAPIDAPI_HOST = "tiktok-api23.p.rapidapi.com"
+
+# Track last request to ensure 1 request/second (approx 1.1s safety)
+_last_request_time = 0
+
+def respect_rate_limit():
+    global _last_request_time
+    elapsed = time.time() - _last_request_time
+    if elapsed < 4.0: # 1000 req/hour ~ 1 req / 3.6s. Gunakan 4.0s agar aman.
+        time.sleep(4.0 - elapsed)
+    _last_request_time = time.time()
+
+# --- Utility: Safe API Request with Retry & Backoff ---
+
+def safe_api_request(url, headers, params=None, timeout=15, max_retries=3):
+    """Wrapper untuk requests.get dengan penanganan error 429 (Rate Limit)."""
+    retry_delay = 5 # Detik awal tunggu
+    
+    for i in range(max_retries + 1):
+        try:
+            respect_rate_limit() # Global RPS enforcement
+            response = requests.get(url, headers=headers, params=params, timeout=timeout)
+            
+            # Log Rate Limit Info from Headers
+            rem = response.headers.get('x-ratelimit-requests-remaining')
+            lim = response.headers.get('x-ratelimit-requests-limit')
+            if rem:
+                print(f"[TikTok API] Quota Remaining: {rem}/{lim}")
+            
+            if response.status_code == 200:
+                return response
+            
+            if response.status_code == 429:
+                if i < max_retries:
+                    wait_time = retry_delay * (2**i) # Exponential backoff
+                    print(f"Rate limit (429) hit. Menunggu {wait_time} detik sebelum mencoba lagi ({i+1}/{max_retries})...")
+                    time.sleep(wait_time)
+                    continue
+                else:
+                    print("Batas maksimal retry tercapai untuk error 429.")
+                    return response
+            
+            # Error lainnya (500, 403, dll)
+            return response
+            
+        except requests.exceptions.RequestException as e:
+            if i < max_retries:
+                time.sleep(retry_delay)
+                continue
+            raise e
+    return None
 
 # --- TikTok Video Extraction ---
 
@@ -10,7 +68,7 @@ def extract_tiktok_data(
     keywords: Union[str, List[str]],
     cursor: str = "0",
     limit: int = 0,
-    sort_by: str = "relevance",
+    sort_by: str = "top",
     start_date: Optional[datetime.datetime] = None,
     end_date: Optional[datetime.datetime] = None
 ) -> Dict[str, Any]:
@@ -19,8 +77,8 @@ def extract_tiktok_data(
 
     url = "https://tiktok-api23.p.rapidapi.com/api/search/video"
     headers = {
-        "x-rapidapi-key": "d501fae7bfmsh3f1de8ef5dc24d3p1d9ebejsnabaf8a976a3e",
-        "x-rapidapi-host": "tiktok-api23.p.rapidapi.com"
+        "x-rapidapi-key": RAPIDAPI_KEY,
+        "x-rapidapi-host": RAPIDAPI_HOST
     }
 
     if isinstance(keywords, str):
@@ -31,7 +89,6 @@ def extract_tiktok_data(
     collected_videos = []
     unique_video_ids = set()
     comment_scraper = TikTokCommentScraper()
-    sample_comments_fetched = False
 
     for keyword in keywords_list:
         querystring = {"keyword": keyword, "cursor": cursor, "search_id": "0"}
@@ -47,8 +104,10 @@ def extract_tiktok_data(
                     break
 
                 querystring["cursor"] = current_cursor
-                response = requests.get(url, headers=headers, params=querystring)
-                response.raise_for_status()
+                response = safe_api_request(url, headers=headers, params=querystring)
+                if not response or response.status_code != 200:
+                    break
+                
                 data = response.json()
 
                 if "item_list" in data and isinstance(data["item_list"], list):
@@ -101,21 +160,22 @@ def extract_tiktok_data(
                             # "source_keyword": keyword
                         }
 
-                        # Ambil sample 10 komentar jika belum ada
-                        if not sample_comments_fetched and int(comment_count) >= 5:
+                        # Batasi pengambilan komentar hanya untuk 20 video teratas
+                        if int(comment_count) >= 1 and len(collected_videos) < 20:
                             try:
-                                video_info["comment_sample"] = comment_scraper.get_comments(video_id, max_comments=10)
-                                if video_info["comment_sample"]:
-                                    sample_comments_fetched = True
-                            except:
+                                # Ambil semua komentar (max_comments=None)
+                                video_info["comment_sample"] = comment_scraper.get_comments(video_id, max_comments=None)
+                            except Exception as e:
+                                print(f"Error sampling comments for {video_id}: {e}")
                                 video_info["comment_sample"] = []
+                        else:
+                            video_info["comment_sample"] = []
                         
                         unique_video_ids.add(video_id)
                         collected_videos.append(video_info)
 
                 if "has_more" in data and data["has_more"] and "cursor" in data and data["cursor"] != current_cursor:
                     current_cursor = data["cursor"]
-                    time.sleep(1)
                 else:
                     has_more = False
         except Exception as e:
@@ -151,14 +211,16 @@ def get_tiktok_video_details(video_id: str) -> Dict[str, Any]:
     """Mengambil metadata video TikTok berdasarkan ID."""
     url = "https://tiktok-api23.p.rapidapi.com/api/post/info"
     headers = {
-        "x-rapidapi-key": "d501fae7bfmsh3f1de8ef5dc24d3p1d9ebejsnabaf8a976a3e",
-        "x-rapidapi-host": "tiktok-api23.p.rapidapi.com"
+        "x-rapidapi-key": RAPIDAPI_KEY,
+        "x-rapidapi-host": RAPIDAPI_HOST
     }
     querystring = {"videoId": video_id}
     
     try:
-        response = requests.get(url, headers=headers, params=querystring)
-        response.raise_for_status()
+        response = safe_api_request(url, headers=headers, params=querystring)
+        if not response or response.status_code != 200:
+            return {"status": "error", "results": []}
+            
         data = response.json()
         
         # Mapping response ke format yang seragam
@@ -175,7 +237,7 @@ def get_tiktok_video_details(video_id: str) -> Dict[str, Any]:
         comment_scraper = TikTokCommentScraper()
         comment_sample = []
         try:
-            comment_sample = comment_scraper.get_comments(video_id_actual, max_comments=10)
+            comment_sample = comment_scraper.get_comments(video_id_actual, max_comments=None)
         except:
             pass
 
@@ -209,8 +271,8 @@ class TikTokCommentScraper:
         has_more = True
         url = "https://tiktok-api23.p.rapidapi.com/api/post/comments"
         headers = {
-            "x-rapidapi-key": "d501fae7bfmsh3f1de8ef5dc24d3p1d9ebejsnabaf8a976a3e",
-            "x-rapidapi-host": "tiktok-api23.p.rapidapi.com"
+            "x-rapidapi-key": RAPIDAPI_KEY,
+            "x-rapidapi-host": RAPIDAPI_HOST
         }
         
         while has_more:
@@ -218,8 +280,8 @@ class TikTokCommentScraper:
                 break
             try:
                 params = {"videoId": video_id, "count": "20", "cursor": str(cursor)}
-                response = requests.get(url, headers=headers, params=params, timeout=15)
-                if response.status_code != 200: break
+                response = safe_api_request(url, headers=headers, params=params, timeout=15)
+                if not response or response.status_code != 200: break
                 res_data = response.json()
                 
                 # Cek beberapa kemungkinan key hasil (tergantung versi API)
@@ -246,8 +308,7 @@ class TikTokCommentScraper:
                 else:
                     has_more = False
                 
-                if has_more:
-                    time.sleep(0.5)
+                # Delay 1 RPS ditangani oleh safe_api_request
             except Exception as e:
                 print(f"Error fetching comments for {video_id}: {e}")
                 break
@@ -259,15 +320,16 @@ class TikTokCommentScraper:
         has_more = True
         url = "https://tiktok-api23.p.rapidapi.com/api/post/comment/replies"
         headers = {
-            "x-rapidapi-key": "d501fae7bfmsh3f1de8ef5dc24d3p1d9ebejsnabaf8a976a3e",
-            "x-rapidapi-host": "tiktok-api23.p.rapidapi.com"
+            "x-rapidapi-key": RAPIDAPI_KEY,
+            "x-rapidapi-host": RAPIDAPI_HOST
         }
         
         while has_more:
             params = {"videoId": video_id, "commentId": comment_id, "count": "50", "cursor": str(cursor)}
             try:
-                res = requests.get(url, headers=headers, params=params, timeout=15)
-                res.raise_for_status()
+                res = safe_api_request(url, headers=headers, params=params, timeout=15)
+                if not res or res.status_code != 200:
+                    break
                 res_data = res.json()
                 
                 data_list = res_data.get("data") or res_data.get("comments") or res_data.get("replies")
