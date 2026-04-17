@@ -6,10 +6,11 @@ export const useCrawlStore = defineStore("crawl", () => {
   const rawData = ref([]);
   const stats = ref({ total: 0, quality: 0 });
   const pipelineStatus = ref({
-    case_folding: "idle",
-    url_removal: "idle",
+    emoji_conversion: "idle",
+    cleansing: "idle",
+    normalization: "idle",
     stopwords: "idle",
-    emotion: "idle",
+    sentiment_analysis: "idle",
   });
   const isAnalyzing = ref(false);
 
@@ -37,18 +38,31 @@ export const useCrawlStore = defineStore("crawl", () => {
   };
 
   const runPipeline = async (onStatus) => {
-    const steps = ["case_folding", "url_removal", "stopwords", "emotion"];
+    const steps = ["emoji_conversion", "cleansing", "normalization", "stopwords", "sentiment_analysis"];
     for (const step of steps) {
       pipelineStatus.value[step] = "running";
-      onStatus({ type: "info", message: `⚙️ Menjalankan ${step}...` });
+      onStatus({ type: "info", message: `⚙️ Menjalankan ${step.replace('_', ' ')}...` });
       try {
         // Endpoint: /api/v1/pipeline/{step}
-        await api.post(`/pipeline/${step}`);
+        const res = await api.post(`/pipeline/${step}`);
+        
+        if (res.data && res.data.status === "error") {
+          pipelineStatus.value[step] = "error";
+          onStatus({ 
+            type: "error", 
+            message: res.data.message || `❌ Gagal pada ${step.replace('_', ' ')}` 
+          });
+          return;
+        }
+
+        if (res.data && res.data.data) {
+          rawData.value = res.data.data;
+        }
         pipelineStatus.value[step] = "done";
-        onStatus({ type: "success", message: `✅ ${step} selesai` });
+        onStatus({ type: "success", message: `✅ ${step.replace('_', ' ')} selesai` });
       } catch {
         pipelineStatus.value[step] = "error";
-        onStatus({ type: "error", message: `❌ ${step} gagal` });
+        onStatus({ type: "error", message: `❌ ${step.replace('_', ' ')} gagal` });
         break;
       }
     }
