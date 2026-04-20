@@ -159,13 +159,13 @@ async def run_sentiment_analysis_legacy():
                         comment['label'] = label
                         
                         processed_obj = ProcessedData(
-                            raw_text=comment.get('raw_text', comment['text']),
-                            cleaned_text=comment['text'],
+                            raw_text=comment.get('raw_text') or comment.get('text') or "",
+                            cleaned_text=comment.get('text') or "",
                             score=score,
                             label=label,
-                            platform=video.get('platform', 'tiktok'),
-                            video_id=video.get('video_id'),
-                            author=comment.get('user_unique_id'),
+                            platform=video.get('platform') or 'tiktok',
+                            video_id=video.get('video_id') or "",
+                            author=comment.get('user_unique_id') or "Unknown",
                             created_at=datetime.now()
                         )
                         processed_items.append(processed_obj)

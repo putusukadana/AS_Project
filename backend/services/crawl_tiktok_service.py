@@ -9,11 +9,17 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # --- Configuration & Global Rate Limiting ---
-RAPIDAPI_KEY = os.getenv("RAPIDAPI_KEY", "d501fae7bfmsh3f1de8ef5dc24d3p1d9ebejsnabaf8a976a3e")
+RAPIDAPI_KEY = os.getenv("RAPIDAPI_KEY", "e0efe95aefmsh313499f65d0af00p165956jsn75b9820f7c78")
+# RAPIDAPI_KEY = os.getenv("RAPIDAPI_KEY", {"d501fae7bfmsh3f1de8ef5dc24d3p1d9ebejsnabaf8a976a3e"})
 RAPIDAPI_HOST = "tiktok-api23.p.rapidapi.com"
 
 # Track last request to ensure 1 request/second (approx 1.1s safety)
 _last_request_time = 0
+_last_quota = {"remaining": 93, "limit": 100} # Initial estimate based on last test
+
+def get_last_quota():
+    global _last_quota
+    return _last_quota
 
 def respect_rate_limit():
     global _last_request_time
@@ -37,7 +43,12 @@ def safe_api_request(url, headers, params=None, timeout=15, max_retries=3):
             rem = response.headers.get('x-ratelimit-requests-remaining')
             lim = response.headers.get('x-ratelimit-requests-limit')
             if rem:
-                print(f"[TikTok API] Quota Remaining: {rem}/{lim}")
+                try:
+                    _last_quota["remaining"] = int(rem)
+                    _last_quota["limit"] = int(lim)
+                except:
+                    pass
+                print(f"[TikTok API] Quota Remaining: {_last_quota['remaining']}/{_last_quota['limit']}")
             
             if response.status_code == 200:
                 return response
@@ -163,8 +174,8 @@ def extract_tiktok_data(
                         # Batasi pengambilan komentar hanya untuk 20 video teratas
                         if int(comment_count) >= 1 and len(collected_videos) < 20:
                             try:
-                                # Ambil semua komentar (max_comments=None)
-                                video_info["comment_sample"] = comment_scraper.get_comments(video_id, max_comments=None)
+                                # Ambil sampel komentar (dibatasi 20 untuk hemat kuota)
+                                video_info["comment_sample"] = comment_scraper.get_comments(video_id, max_comments=20)
                             except Exception as e:
                                 print(f"Error sampling comments for {video_id}: {e}")
                                 video_info["comment_sample"] = []

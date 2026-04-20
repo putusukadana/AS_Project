@@ -2,7 +2,7 @@
   <div class="flex flex-col gap-6 w-full">
     <RawStats :totalData="stats.total" :signalQuality="stats.quality" />
     <RawSnapshotTable :rows="rawData" />
-    <ObsidianPipeline :steps="pipelineSteps" @analyze="runAnalysis" />
+    <ObsidianPipeline :steps="pipelineSteps" @analyze="runAnalysis" @retry="handleRetry" />
   </div>
 </template>
 
@@ -28,5 +28,11 @@ const pipelineSteps = computed(() => [
 
 const runAnalysis = async () => {
   await crawlStore.runSentimentAnalysis();
+};
+
+const handleRetry = async (stepId) => {
+  // We need to pass the same onStatus callback or a similar one if we want logs.
+  // ExtractionPanel usually provides the onStatus to startCrawl, but here we can just run it.
+  await crawlStore.retryStep(stepId, (msg) => console.log(msg.message));
 };
 </script>

@@ -39,32 +39,54 @@ export const useCrawlStore = defineStore("crawl", () => {
 
   const runPipeline = async (onStatus) => {
     const steps = ["emoji_conversion", "cleansing", "normalization", "stopwords", "sentiment_analysis"];
+    
     for (const step of steps) {
+      // Skip if already done
+      if (pipelineStatus.value[step] === "done") continue;
+
       pipelineStatus.value[step] = "running";
-      onStatus({ type: "info", message: `⚙️ Menjalankan ${step.replace('_', ' ')}...` });
+      const displayStep = step.replace('_', ' ');
+      
+      if (onStatus) onStatus({ type: "info", message: `⚙️ Menjalankan ${displayStep}...` });
+      
       try {
-        // Endpoint: /api/v1/pipeline/{step}
         const res = await api.post(`/pipeline/${step}`);
         
         if (res.data && res.data.status === "error") {
           pipelineStatus.value[step] = "error";
-          onStatus({ 
-            type: "error", 
-            message: res.data.message || `❌ Gagal pada ${step.replace('_', ' ')}` 
-          });
-          return;
+          if (onStatus) {
+            onStatus({ 
+              type: "error", 
+              message: res.data.message || `❌ Gagal pada ${displayStep}` 
+            });
+          }
+          return; // Stop the loop on error
         }
 
         if (res.data && res.data.data) {
           rawData.value = res.data.data;
         }
+        
         pipelineStatus.value[step] = "done";
-        onStatus({ type: "success", message: `✅ ${step.replace('_', ' ')} selesai` });
-      } catch {
+        if (onStatus) onStatus({ type: "success", message: `✅ ${displayStep} selesai` });
+      } catch (err) {
         pipelineStatus.value[step] = "error";
-        onStatus({ type: "error", message: `❌ ${step.replace('_', ' ')} gagal` });
+        if (onStatus) onStatus({ type: "error", message: `❌ ${displayStep} gagal: ${err.message}` });
         break;
       }
+    }
+  };
+
+  const retryStep = async (stepId, onStatus) => {
+    // Reset targeted step and any subsequent steps to idle if they aren't done
+    const steps = ["emoji_conversion", "cleansing", "normalization", "stopwords", "sentiment_analysis"];
+    const startIndex = steps.indexOf(stepId);
+    
+    if (startIndex !== -1) {
+      // Optional: you might want to reset subsequent steps too, 
+      // but runPipeline's loop logic already handles this by stopping at the first non-done step.
+      pipelineStatus.value[stepId] = "idle"; 
+      await runPipeline(onStatus);
     }
   };
 

@@ -100,6 +100,17 @@
             <div v-else-if="step.status === 'running'" key="running" class="relative">
               <div class="w-6 h-6 border-2 border-amber-500/20 border-t-amber-500 rounded-full animate-spin"></div>
             </div>
+            <div v-else-if="step.status === 'error'" key="error" class="flex items-center justify-center">
+              <button 
+                @click.stop="$emit('retry', step.id)"
+                class="w-8 h-8 bg-rose-500 text-white rounded-full flex items-center justify-center hover:bg-rose-600 hover:rotate-180 transition-all duration-500 shadow-md shadow-rose-200"
+                title="Retry Step"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+              </button>
+            </div>
             <div v-else key="idle" class="w-2 h-2 bg-slate-200 rounded-full"></div>
           </Transition>
         </div>
