@@ -10,14 +10,22 @@
     <!-- Right Actions -->
     <div class="flex items-center gap-4">
       <!-- Search Input -->
-      <div class="hidden md:flex items-center bg-slate-100 rounded-full px-4 py-1.5 border border-transparent focus-within:border-indigo-300 focus-within:bg-white transition-all">
+      <!-- <div class="hidden md:flex items-center bg-slate-100 rounded-full px-4 py-1.5 border border-transparent focus-within:border-indigo-300 focus-within:bg-white transition-all">
         <span class="text-slate-400 mr-2 text-sm">🔍</span>
         <input 
           type="text" 
           placeholder="Search something..." 
           class="bg-transparent border-none outline-none text-sm text-slate-700 w-48 placeholder:text-slate-400"
         />
-      </div>
+      </div> -->
+
+      <!-- Stats & Reports -->
+      <!-- <div class="hidden lg:flex items-center gap-4 mr-2">
+        <div class="flex flex-col items-end">
+          <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Last Update</span>
+          <span class="text-[11px] font-bold text-slate-500">2 min ago</span>
+        </div>
+      </div> -->
 
       <!-- Notifications -->
       <button class="relative p-2 text-slate-500 hover:text-slate-900 transition-colors">
@@ -26,8 +34,8 @@
       </button>
 
       <!-- User Profile Dropdown -->
-      <div class="relative" @click="toggleDropdown">
-        <div class="flex items-center gap-3 cursor-pointer group">
+      <div class="relative" ref="dropdownContainer">
+        <div class="flex items-center gap-3 cursor-pointer group" @click.stop="toggleDropdown">
           <div class="flex flex-col text-right hidden sm:flex">
             <span class="text-sm font-semibold text-slate-700 group-hover:text-indigo-600 transition-colors">{{ user.username || 'User' }}</span>
             <span class="text-[11px] text-slate-400 leading-tight uppercase tracking-wider font-bold">Administrator</span>
@@ -61,16 +69,31 @@
 </template>
 
 <script setup>
-import { ref } from "vue";
+import { ref, onMounted, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
 
 const router = useRouter();
 const showDropdown = ref(false);
+const dropdownContainer = ref(null);
 const user = JSON.parse(localStorage.getItem('user') || '{}');
 
 const toggleDropdown = () => {
   showDropdown.value = !showDropdown.value;
 };
+
+const closeDropdown = (e) => {
+  if (dropdownContainer.value && !dropdownContainer.value.contains(e.target)) {
+    showDropdown.value = false;
+  }
+};
+
+onMounted(() => {
+  window.addEventListener("click", closeDropdown);
+});
+
+onUnmounted(() => {
+  window.removeEventListener("click", closeDropdown);
+});
 
 const handleLogout = () => {
   localStorage.removeItem("token");

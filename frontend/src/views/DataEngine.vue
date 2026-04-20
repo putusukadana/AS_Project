@@ -5,7 +5,7 @@
 
     <div class="flex flex-1 overflow-hidden">
       <!-- Sidebar Navigation -->
-      <AppSidebar activePage="data-engine" />
+      <AppSidebar activePage="data-engine" :show-new-crawl="false" />
 
       <!-- Main Layout -->
       <main class="flex-1 overflow-y-auto p-6 md:p-8 lg:p-10">
@@ -14,11 +14,6 @@
           <!-- Header Section -->
           <div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
             <div>
-              <nav class="flex text-sm text-slate-400 mb-2 font-medium">
-                <span class="hover:text-slate-600 cursor-pointer">Dashboard</span>
-                <span class="mx-2">/</span>
-                <span class="text-indigo-600">Data Engine</span>
-              </nav>
               <h1 class="text-4xl font-black text-slate-900 tracking-tight">TikTok Scraper & NLP Pipeline</h1>
               <p class="text-slate-500 mt-2 font-medium max-w-2xl">
                 Alat ekstraksi data multi-platform yang terintegrasi dengan pipeline pemrosesan bahasa alami "Obsidian" 
