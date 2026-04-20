@@ -1,62 +1,86 @@
-# Issue: Implementasi Halaman Dashboard Utama
+# Issue: Implementasi Indikator Sisa Kuota API (RapidAPI) di Sidebar
 
 ## Deskripsi Singkat
-Membuat halaman **Dashboard** utama aplikasi yang akan menjadi pusat pemantauan analitik sentimen dan emosi dari berbagai platform. Halaman ini memerlukan tata letak kompleks dengan beberapa widget chart, summary stat, dan panel integrasi AI.
+Modifikasi elemen "Storage Status" pada komponen sidebar (`AppSidebar.vue`) menjadi "API Quota Status". Fitur ini bertujuan untuk menampilkan sisa kuota request dari plan RapidAPI yang digunakan (misalnya 93/100 request). Data ini harus diambil secara dinamis dari backend dan ditampilkan dalam bentuk nominal angka serta *progress bar* persentase.
 
-## Kebutuhan UI/UX
-1. **Sidebar Navigasi & Headbar**: Menggunakan bentuk visual dan tata letak yang konsisten (seperti halaman *DataEngine*). 
-   - **Headbar**: Terdapat fitur tambahan yakni: tombol **Download PDF Report**, indikator **Last Update** (di pojok kanan atas), ikon notifikasi (lonceng), dan ikon pengaturan akun/profil.
-   - **Sidebar (Kiri Bawah)**: Terdapat keterangan status **Free Version** dan tombol **Upgrade Plan**.
-2. **Widget Utama (4 Besar)**:
-   - **Sentiment Distribution**: Grafik (Barchart/Stacked) perbandingan sentimen (Positif, Netral, Negatif) antar platform.
-   - **Emotional Spectrum**: Grafik (Radar atau Doughnut Chart) distribusi ragam emosi.
-   - **Top Keywords**: Daftar kata kunci yang sering muncul, dilengkapi dengan filter *toggle* (Positif/Negatif/Netral).
-   - **AI Insights Engine**: Panel teks khusus yang menyajikan analisis otomatis dan rekomendasi tindakan berdasarkan data yang didapat dari AI.
-3. **Statistik Ringkas (Bagian Bawah)**:
-   - Menampilkan 4 metrik utama: **Global Reach**, **Active Mentions**, **Avg. Sentiment**, dan **Crisis Alerts**.
+---
+
+## Kebutuhan Fitur (Requirements)
+1. **Backend**: Terdapat mekanisme untuk mengetahui dan menyediakan data sisa kuota RapidAPI terakhir ke *frontend* tanpa menghamburkan kuota untuk request tambahan.
+2. **Frontend UI**: Elemen statis "Storage Status" di Sidebar diubah menjadi dinamis menampilkan sisa kuota.
+3. **Frontend Logic**: Fetch data kuota dari backend saat halaman/sidebar dimuat (atau secara periodik).
 
 ---
 
 ## Tahapan Implementasi (Step-by-Step Guide)
 
-Dokumen ini ditujukan bagi programmer junior atau asisten AI untuk mengimplementasikan halaman tersebut secara sistematis. Prioritaskan penggunaan **Tailwind CSS** untuk styling.
+Dokumen ini ditujukan bagi programmer junior atau asisten AI pendamping untuk mengimplementasikan fitur status kuota secara terstruktur.
 
-### Tahap 1: Persiapan Struktur Layout & Routing
-1. Buat file Vue komponen baru, misalnya di `src/views/Dashboard.vue`.
-2. Tambahkan konfigurasi _route_ untuk `/dashboard` di file router Vue Anda.
-3. Gunakan atau ekstraksi komponen layout standar (Sidebar dan Headbar) yang sudah ada agar dapat digunakan kembali (reusable).
-4. **Modifikasi Sidebar**: Pada bagian paling bawah Sidebar, tambahkan area untuk merender teks keterangan "Free Version" beserta tombol CTA "Upgrade Plan".
-5. **Modifikasi Headbar**: Pada seksi kanan Headbar, pasang secara berurutan: Indikator "Last Update: [Waktu]", tombol "Download PDF Report", ikon Lonceng (Notifikasi), dan elemen Profil/Akun.
+### Tahap 1: Persiapan Backend (Menyimpan Status Kuota Terakhir)
+Karena memanggil API RapidAPI hanya untuk mengecek kuota akan membuang kuota yang berharga, gunakan pendekatan _caching_ pasif:
+1. Buka file service yang mengatur request ke RapidAPI, seperti `backend/services/crawl_tiktok_service.py`.
+2. Buat variabel global atau *in-memory cache* (misalnya `last_api_quota = {"remaining": 0, "limit": 100}`).
+3. Pada fungsi `safe_api_request`, cari bagian kode yang mengambil nilai dari _headers_ respons:
+   ```python
+   rem = response.headers.get('x-ratelimit-requests-remaining')
+   lim = response.headers.get('x-ratelimit-requests-limit')
+   ```
+4. Tambahkan logika untuk memperbarui variabel `last_api_quota` dengan nilai integer dari `rem` dan `lim` setiap kali request berhasil. Jika nilai tidak ada (karena API gagal atau belum pernah request awal), bisa di-set ke _default value_.
 
-### Tahap 2: Pembagian Ruang (Grid Layout)
-1. Buat struktur grid utama di dalam file `Dashboard.vue` menggunakan kelas Tailwind (misalnya: `grid grid-cols-1 lg:grid-cols-2 gap-6`).
-2. Tentukan area (Container) untuk 4 Widget Besar (misal dengan rasio layar yang seimbang) pada bagian atas/tengah.
-3. Di luar grid widget besar tersebut, tepatnya di **bagian paling bawah halaman**, siapkan area grid satu baris (misalnya `grid grid-cols-2 lg:grid-cols-4 gap-4`) khusus untuk menampung 4 buah metrik Statistik Ringkas.
+### Tahap 2: Bikin Endpoint API di Backend
+1. Buka file router/controller utama (misalnya `backend/main.py` atau file khusus API monitoring).
+2. Tambahkan endpoint baru dengan format: `GET /api/v1/quota`.
+3. Kembalikan nilai JSON berisi variabel kuota yang sudah disimpan pada Tahap 1.
+   *Contoh Response:*
+   ```json
+   {
+     "status": "success",
+     "data": {
+       "remaining": 93,
+       "limit": 100
+     }
+   }
+   ```
 
-### Tahap 3: Implementasi 4 Widget Besar
-Gunakan *library* chart bawaan dari *project* (misal: `chart.js` / `apexcharts`). Untuk setiap widget, buat card dengan tampilan modern (gunakan border-radius, background putih/gelap adaptif, shadow tipis).
-1. **Widget Sentiment Distribution**:
-   - Buat judul: "Sentiment Distribution".
-   - Integrasikan *Bar Chart* (Stacked). Sumbu-X berisi list platform, Sumbu-Y berisi jumlah/frekuensi. Gunakan pewarnaan standar: hijau (positif), abu-abu (netral), merah (negatif).
-2. **Widget Emotional Spectrum**:
-   - Buat judul: "Emotional Spectrum".
-   - Integrasikan *Radar Chart* atau *Doughnut Chart* untuk memperlihatkan rasio sebaran emosi.
-3. **Widget Top Keywords**:
-   - Buat judul: "Top Keywords".
-   - Buat 3 opsi tombol tab/filter: Positif, Negatif, Netral.
-   - Buat daftar (List) atau Tag Cloud untuk kumpulan *keyword*. Sistem harus bisa menukar *list* yang ditampilkan jika filter di-klik.
-4. **Widget AI Insights Engine**:
-   - Buat judul: "AI Insights Engine". Berikan aksen visual khusus (misalnya ikon percikan bintang/sparkles atau aksen warna gradasi) untuk membedakannya sebagai fitur "Cerdas".
-   - Sediakan ruang paragraf terstruktur untuk merender Insight Point per Point dari analitik AI.
+### Tahap 3: Persiapan Frontend (Store / API Fetch)
+1. Buka file yang mengatur panggilan API ke backend di Frontend (misalnya `frontend/src/api/` atau langsung di komponen).
+2. Di dalam komponen `frontend/src/components/layout/AppSidebar.vue`, siapkan state menggunakan `ref` dari Vue 3 Composition API:
+   ```vue
+   const quotaRemaining = ref(0);
+   const quotaLimit = ref(100);
+   const quotaPercentage = computed(() => {
+     if (quotaLimit.value === 0) return 0;
+     return Math.round((quotaRemaining.value / quotaLimit.value) * 100);
+   });
+   ```
+3. Buat fungsi `fetchQuotaStatus()` menggunakan `fetch` atau `axios` untuk memanggil endpoint `GET /api/v1/quota` yang dibuat pada Tahap 2.
+4. Panggil fungsi `fetchQuotaStatus()` di dalam _hook_ `onMounted(() => { ... })`.
 
-### Tahap 4: Implementasi 4 Statistik Ringkas (Bagian Bawah)
-Buat _card_ mini untuk masing-masing angka indikator utama:
-1. **Global Reach**: Tampilkan angka total pantauan beserta Ikon Global/Jaringan (Network).
-2. **Active Mentions**: Tampilkan angka *mentions* terbaru beserta Ikon Percakapan/Megafon.
-3. **Avg. Sentiment**: Tampilkan indikator performa sentimen agregat (misal persentase atau _grade_ nilai) dengan ikon *Smiley* atau kurva naik.
-4. **Crisis Alerts**: Tampilkan angka indikator _Alert_ dengan pewarnaan yang menonjolkan fungsi peringatan (misal warna merah bata) dan ikon Danger/Warning.
+### Tahap 4: Modifikasi UI `AppSidebar.vue`
+Temukan blok kode HTML berikut di dalam template `AppSidebar.vue`:
+```html
+<div class="flex items-center gap-2 mb-2">
+  <span class="text-xs font-bold text-slate-400 uppercase tracking-widest">Storage Status</span>
+  <span class="ml-auto text-xs font-bold text-indigo-600">85%</span>
+</div>
+<div class="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
+  <div class="bg-indigo-500 h-full w-[85%] group-hover:bg-indigo-600 transition-colors"></div>
+</div>
+```
 
-### Tahap 5: Menyuntikkan Mock Data (State Management dummy)
-1. Siapkan semua struktur datanya menggunakan `ref` atau `reactive` (Vue 3 Composition API).
-2. Buat data dummy untuk mengisi masing-masing widget (data chart, top keywords beserta ketiganya kategorinya, teks statis untuk AI insights, dan angka dummy untuk stat bottom).
-3. Setelah semuanya tampil, tinjau **Responsive Design** agar tampilan tidak rusak walau diakses dari versi perangkat dengan layar sempit (contoh: jadikan grid turun kolom `grid-cols-1` di layar ponsel).
+**Ubah menjadi:**
+1. Ganti teks "Storage Status" menjadi **"API Quota"** atau **"Requests Left"**.
+2. Ganti angka persentase statis `"85%"` dengan variabel teks yang menunjukkan nominal yang tersisa dan *limit*nya, misalnya: `{{ quotaRemaining }} / {{ quotaLimit }}`.
+3. Ubah logika *progress bar* agar lebar elemen bereaksi terhadap persen kuota secara dinamis:
+   ```html
+   <div 
+     class="bg-indigo-500 h-full group-hover:bg-indigo-600 transition-all duration-500"
+     :style="{ width: quotaPercentage + '%' }"
+   ></div>
+   ```
+   *(Opsional: Berikan warna khusus seperti `bg-red-500` jika indikator `quotaPercentage` berada di bawah 10% untuk indikasi bahaya).*
+
+### Tahap 5: Testing & Validasi
+1. Pastikan tidak ada _error_ saat memuat Dashboard, meskipun backend belum pernah melakukan request crawling.
+2. Lakukan satu _crawling_ singkat.
+3. Refresh atau panggil ulang data di Frontend, pastikan angka sisa kuota (misalnya turun dari 94 ke 93) ter-update dengan benar pada indikator sidebar.
