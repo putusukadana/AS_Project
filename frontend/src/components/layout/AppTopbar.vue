@@ -41,7 +41,7 @@
             <span class="text-[11px] text-slate-400 leading-tight uppercase tracking-wider font-bold">Administrator</span>
           </div>
           <img 
-            src="../assets/hero.png" 
+            src="@/assets/hero.png" 
             alt="Profile" 
             class="w-10 h-10 rounded-full bg-slate-200 border-2 border-transparent group-hover:border-indigo-200 transition-all p-0.5"
           />

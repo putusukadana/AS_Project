@@ -59,7 +59,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import api from '@/services/api';
 
 defineProps({
@@ -87,11 +87,18 @@ const fetchQuota = async () => {
   }
 };
 
+let intervalId = null;
+
 onMounted(() => {
   fetchQuota();
   // Refresh quota every 30 seconds
-  const interval = setInterval(fetchQuota, 30000);
-  return () => clearInterval(interval);
+  intervalId = setInterval(fetchQuota, 30000);
+});
+
+onUnmounted(() => {
+  if (intervalId) {
+    clearInterval(intervalId);
+  }
 });
 
 const navItems = [
