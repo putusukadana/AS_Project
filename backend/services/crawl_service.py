@@ -12,6 +12,7 @@ from services.crawl_tiktok_service import (
 async def run_crawl(
     platforms: list, 
     keyword: str, 
+    video_limit: int = 0,
     start_date: Optional[datetime.datetime] = None, 
     end_date: Optional[datetime.datetime] = None
 ) -> dict:
@@ -42,7 +43,7 @@ async def run_crawl(
             
             tiktok_res = extract_tiktok_data(
                 keywords=item, 
-                limit=100, # Lower safety limit per keyword for multi-search
+                limit=video_limit, 
                 sort_by=sort_by,
                 start_date=start_date, 
                 end_date=end_date

@@ -11,6 +11,7 @@ router = APIRouter(prefix="/api/v1/crawl", tags=["crawl"])
 class CrawlRequest(BaseModel):
     platforms: List[str]
     keyword: str
+    video_limit: Optional[int] = 0 
     start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None
 
@@ -19,6 +20,7 @@ async def start_crawl(body: CrawlRequest):
     result = await run_crawl(
         body.platforms, 
         body.keyword, 
+        body.video_limit, 
         body.start_date, 
         body.end_date
     )

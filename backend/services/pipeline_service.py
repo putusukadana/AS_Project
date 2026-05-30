@@ -7,6 +7,7 @@ from typing import List, Dict, Any, Optional
 from database import db
 from models import ProcessedData
 from Sastrawi.StopWordRemover.StopWordRemoverFactory import StopWordRemoverFactory
+from Sastrawi.Stemmer.StemmerFactory import StemmerFactory
 
 # --- Inisialisasi Kamus & Stopword ---
 
@@ -42,6 +43,10 @@ neg_kamus = load_kamus_sentimen(path_neg)
 factory = StopWordRemoverFactory()
 stopword_remover = factory.create_stop_word_remover()
 
+# 4. Sastrawi Stemmer
+factory_stemmer = StemmerFactory()
+stemmer = factory_stemmer.create_stemmer()
+
 # --- Fungsi Pemrosesan ---
 
 def clean_text(teks: str) -> str:
@@ -62,6 +67,11 @@ def normalisasi_slang(teks: str) -> str:
     if not isinstance(teks, str):
         return ""
     return ' '.join([slang_dict.get(kata, kata) for kata in teks.split()])
+
+def stem_text(teks: str) -> str:
+    if not isinstance(teks, str):
+        return ""
+    return stemmer.stem(teks)
 
 def skor_sentimen(teks: str) -> float:
     if not isinstance(teks, str):
@@ -146,23 +156,20 @@ async def run_stopwords():
     except Exception as e:
         return {"status": "error", "step": "stopwords", "message": str(e)}
 
-async def run_sentiment_analysis_legacy():
+async def run_stemming():
     try:
         processed_items = []
         for video in _current_data:
             if 'comment_sample' in video:
                 for comment in video['comment_sample']:
                     if 'text' in comment:
-                        score = skor_sentimen(comment['text'])
-                        label = label_sentimen(score)
-                        comment['score'] = score
-                        comment['label'] = label
+                        stemmed = stem_text(comment['text'])
+                        comment['stemmed_text'] = stemmed
                         
                         processed_obj = ProcessedData(
                             raw_text=comment.get('raw_text') or comment.get('text') or "",
                             cleaned_text=comment.get('text') or "",
-                            score=score,
-                            label=label,
+                            stemmed_text=stemmed,
                             platform=video.get('platform') or 'tiktok',
                             video_id=video.get('video_id') or "",
                             author=comment.get('user_unique_id') or "Unknown",
@@ -173,10 +180,10 @@ async def run_sentiment_analysis_legacy():
         if processed_items:
             await save_processed_data(processed_items)
                 
-        return {"status": "done", "step": "sentiment", "data": _current_data}
+        return {"status": "done", "step": "stemming", "data": _current_data}
     except Exception as e:
-        print(f"Internal Sentiment Error: {e}")
-        return {"status": "error", "step": "sentiment", "message": "Terjadi kesalahan pada sistem pemrosesan sentiment analysis."}
+        print(f"Internal Stemming Error: {e}")
+        return {"status": "error", "step": "stemming", "message": "Terjadi kesalahan pada sistem pemrosesan stemming."}
 
 # Orchestrator (Optional, for batch processing from scratch)
 async def execute_pipeline(raw_data_list: List[Dict[str, Any]]) -> Dict[str, Any]:
@@ -188,7 +195,7 @@ async def execute_pipeline(raw_data_list: List[Dict[str, Any]]) -> Dict[str, Any
     await run_cleansing()
     await run_normalization()
     await run_stopwords()
-    res = await run_sentiment_analysis_legacy()
+    res = await run_stemming()
     return res
 
 # Placeholder functions
