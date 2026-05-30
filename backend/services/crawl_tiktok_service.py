@@ -117,6 +117,8 @@ def extract_tiktok_data(
                 querystring["cursor"] = current_cursor
                 response = safe_api_request(url, headers=headers, params=querystring)
                 if not response or response.status_code != 200:
+                    if response and response.status_code == 429:
+                        print(f"[Video] Kuota API habis. Menyelesaikan crawling dengan {len(collected_videos)} video yang sudah didapat.")
                     break
                 
                 data = response.json()
@@ -160,22 +162,18 @@ def extract_tiktok_data(
                         video_info = {
                             "platform": "tiktok",
                             "nickname": author.get("nickname", "Tidak tersedia"),
-                            # "description": description,
-                            # "text": description, # for generic text field
                             "post_url": post_url,
                             "video_id": video_id,
                             "author_unique_id": author_unique_id,
                             "comment_count": int(comment_count),
-                            "estimated_size_kb": round(float(comment_count) * 0.15, 2), # Estimasi 0.15KB per komentar
-                            # "created_at": create_time_str,
-                            # "source_keyword": keyword
+                            "estimated_size_kb": round(float(comment_count) * 0.15, 2),
                         }
 
                         # Batasi pengambilan komentar hanya untuk 20 video teratas
-                        if int(comment_count) >= 1 and len(collected_videos) < 20:
+                        if int(comment_count) >= 1:
                             try:
-                                # Ambil sampel komentar (dibatasi 20 untuk hemat kuota)
-                                video_info["comment_sample"] = comment_scraper.get_comments(video_id, max_comments=20)
+                                # Ambil semua komentar
+                                video_info["comment_sample"] = comment_scraper.get_comments(video_id, max_comments=None)
                             except Exception as e:
                                 print(f"Error sampling comments for {video_id}: {e}")
                                 video_info["comment_sample"] = []
@@ -292,7 +290,23 @@ class TikTokCommentScraper:
             try:
                 params = {"videoId": video_id, "count": "20", "cursor": str(cursor)}
                 response = safe_api_request(url, headers=headers, params=params, timeout=15)
-                if not response or response.status_code != 200: break
+                
+                # Jika API mengembalikan error (termasuk 429 quota habis), hentikan gracefully
+                if not response or response.status_code != 200:
+                    if response and response.status_code == 429:
+                        print(f"[Komentar] Kuota API habis saat mengambil komentar video {video_id}. Menghentikan pengambilan komentar.")
+                    break
+                    
+                # Cek sisa kuota dari header, jika 0 maka berhenti setelah proses response ini
+                remaining = response.headers.get('x-ratelimit-requests-remaining')
+                quota_exhausted = False
+                if remaining is not None:
+                    try:
+                        if int(remaining) <= 0:
+                            quota_exhausted = True
+                    except:
+                        pass
+                
                 res_data = response.json()
                 
                 # Cek beberapa kemungkinan key hasil (tergantung versi API)
@@ -318,7 +332,10 @@ class TikTokCommentScraper:
                     cursor = next_cursor
                 else:
                     has_more = False
-                
+                # Jika kuota sudah habis, hentikan loop setelah memproses response terakhir
+                if quota_exhausted:
+                    print(f"[Komentar] Kuota API telah habis. Menyelesaikan crawling dengan {len(comments)} komentar yang sudah didapat.")
+                    break
                 # Delay 1 RPS ditangani oleh safe_api_request
             except Exception as e:
                 print(f"Error fetching comments for {video_id}: {e}")

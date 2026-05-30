@@ -109,12 +109,10 @@ const openPreview = (summary) => {
   const commentsHtml = summary.sampleComments.map(c => `
     <tr style="border-bottom: 1px solid #f1f5f9; vertical-align: top;">
       <td style="padding: 12px; font-size: 13px; color: #1e293b; font-weight: 600; width: 120px;">@${c.user_unique_id || 'user'}</td>
-      <td style="padding: 12px; font-size: 13px; color: #64748b; font-style: italic; background: #fcfcfc;">${c.raw_text || c.text || '-'}</td>
-      <td style="padding: 12px; font-size: 13px; color: #1e293b;">${c.text || '-'}</td>
-      <td style="padding: 12px; font-size: 12px; text-align: center;">
-        <span style="display: inline-block; padding: 2px 8px; border-radius: 4px; font-weight: bold; background: ${c.label === 'Positif' ? '#ecfdf5' : c.label === 'Negatif' ? '#fff1f2' : '#f8fafc'}; color: ${c.label === 'Positif' ? '#059669' : c.label === 'Negatif' ? '#e11d48' : '#64748b'}; border: 1px solid ${c.label === 'Positif' ? '#d1fae5' : c.label === 'Negatif' ? '#ffe4e6' : '#e2e8f0'};">
-          ${c.label || 'Belum Dinilai'}
-        </span>
+      <td style="padding: 12px; font-size: 13px; color: #64748b; font-style: italic; background: #fcfcfc;">${c.raw_text || '-'}</td>
+      <td style="padding: 12px; font-size: 13px; color: #475569;">${c.text || '-'}</td>
+      <td style="padding: 12px; font-size: 13px; color: #1e293b; font-weight: 600; background: #f8fafc;">
+        ${c.stemmed_text || '<span style="color: #94a3b8; font-style: italic;">Belum Di-stemming</span>'}
       </td>
     </tr>
   `).join('');
@@ -140,15 +138,15 @@ const openPreview = (summary) => {
         <div class="container">
           <div class="header">
             <h1>Preview Analysis - ${summary.platform}</h1>
-            <p>Perbandingan Teks Asli vs Teks Bersih & Label Sentimen</p>
+            <p>Perbandingan Teks Asli vs Teks Bersih & Hasil Stemming Sastrawi</p>
           </div>
           <table>
             <thead>
               <tr>
                 <th>Username</th>
                 <th>Teks Asli (Raw)</th>
-                <th>Teks Bersih (Cleaned)</th>
-                <th style="text-align: center;">Sentimen</th>
+                 <th>Teks Bersih (Stopwords)</th>
+                <th>Teks Stemmed (Kata Dasar)</th>
               </tr>
             </thead>
             <tbody>${commentsHtml}</tbody>

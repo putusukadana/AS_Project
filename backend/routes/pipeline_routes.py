@@ -4,7 +4,7 @@ from services.pipeline_service import (
     run_cleansing, 
     run_normalization, 
     run_stopwords, 
-    run_sentiment_analysis_legacy
+    run_stemming
 )
 
 router = APIRouter(prefix="/api/v1/pipeline", tags=["pipeline"])
@@ -25,6 +25,6 @@ async def normalization():
 async def stopwords():
     return await run_stopwords()
 
-@router.post("/sentiment_analysis")
-async def sentiment_analysis():
-    return await run_sentiment_analysis_legacy()
+@router.post("/stemming")
+async def stemming():
+    return await run_stemming()

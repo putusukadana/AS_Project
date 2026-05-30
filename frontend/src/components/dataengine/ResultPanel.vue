@@ -23,7 +23,7 @@ const pipelineSteps = computed(() => [
   { id: "cleansing", icon: "🧹", label: "Data Cleansing", status: crawlStore.pipelineStatus.cleansing },
   { id: "normalization", icon: "📏", label: "Slang Normalization", status: crawlStore.pipelineStatus.normalization },
   { id: "stopwords", icon: "🚫", label: "Stopwords Removal", status: crawlStore.pipelineStatus.stopwords },
-  { id: "sentiment_analysis", icon: "📊", label: "Sentiment Labeling", status: crawlStore.pipelineStatus.sentiment_analysis },
+  { id: "stemming", icon: "🌱", label: "Indonesian Stemming", status: crawlStore.pipelineStatus.stemming },
 ]);
 
 const runAnalysis = async () => {

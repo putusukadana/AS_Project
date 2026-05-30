@@ -79,6 +79,24 @@
       </p>
     </div>
 
+    <!-- Jumlah Video -->
+    <div class="mt-6 space-y-3" :class="{ 'opacity-30 pointer-events-none': extractionMode === 'url' }">
+      <label class="block text-sm font-bold text-slate-500 uppercase tracking-wider">Jumlah Video</label>
+      <div class="relative group">
+        <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors">🎬</span>
+        <input
+          v-model.number="videoLimit"
+          type="number"
+          min="0"
+          placeholder="0 = Ambil semua video"
+          class="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder:text-slate-400 outline-none focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all font-medium"
+        />
+      </div>
+      <p class="text-[11px] text-slate-400 pl-1 font-medium italic">
+        * Isi 0 untuk mengambil semua video. Isi angka > 0 untuk membatasi jumlah video yang di-crawl.
+      </p>
+    </div>
+
     <!-- Rentang Waktu -->
     <div class="mt-8 space-y-3" :class="{ 'opacity-30 pointer-events-none': extractionMode === 'url' }">
       <label class="block text-sm font-bold text-slate-500 uppercase tracking-wider">Rentang Waktu</label>
@@ -175,6 +193,7 @@ const startCrawl = async () => {
     await crawlStore.startCrawl({
       platforms: extractionMode.value === 'url' ? ['tiktok'] : selectedPlatforms.value,
       keyword: keyword.value,
+      video_limit: videoLimit.value,
       start_date: (extractionMode.value === 'keyword' && startDate.value) ? new Date(startDate.value).toISOString() : null,
       end_date: (extractionMode.value === 'keyword' && endDate.value) ? new Date(endDate.value).toISOString() : null,
       onStatus: (log) => {
@@ -185,4 +204,7 @@ const startCrawl = async () => {
     isCrawling.value = false;
   }
 };
+
+const videoLimit = ref(0);
+
 </script>

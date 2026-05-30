@@ -10,7 +10,7 @@ export const useCrawlStore = defineStore("crawl", () => {
     cleansing: "idle",
     normalization: "idle",
     stopwords: "idle",
-    sentiment_analysis: "idle",
+    stemming: "idle",
   });
   const isAnalyzing = ref(false);
 
@@ -21,6 +21,7 @@ export const useCrawlStore = defineStore("crawl", () => {
       const res = await api.post("/crawl/start", { 
         platforms, 
         keyword,
+        video_limit: video_limit || 0,
         start_date: start_date || null,
         end_date: end_date || null
       });
@@ -38,7 +39,7 @@ export const useCrawlStore = defineStore("crawl", () => {
   };
 
   const runPipeline = async (onStatus) => {
-    const steps = ["emoji_conversion", "cleansing", "normalization", "stopwords", "sentiment_analysis"];
+    const steps = ["emoji_conversion", "cleansing", "normalization", "stopwords", "stemming"];
     
     for (const step of steps) {
       // Skip if already done
@@ -79,7 +80,7 @@ export const useCrawlStore = defineStore("crawl", () => {
 
   const retryStep = async (stepId, onStatus) => {
     // Reset targeted step and any subsequent steps to idle if they aren't done
-    const steps = ["emoji_conversion", "cleansing", "normalization", "stopwords", "sentiment_analysis"];
+    const steps = ["emoji_conversion", "cleansing", "normalization", "stopwords", "stemming"];
     const startIndex = steps.indexOf(stepId);
     
     if (startIndex !== -1) {

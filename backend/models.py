@@ -38,8 +38,7 @@ class TokenData(BaseModel):
 class ProcessedData(BaseModel):
     raw_text: str
     cleaned_text: str
-    score: float
-    label: str
+    stemmed_text: str
     platform: Optional[str] = "tiktok"
     video_id: Optional[str] = None
     author: Optional[str] = None
