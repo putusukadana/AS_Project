@@ -13,9 +13,11 @@ export const useCrawlStore = defineStore("crawl", () => {
     stemming: "idle",
   });
   const isAnalyzing = ref(false);
+  const sentimentSummary = ref(null);
+  const analyzedData = ref([]);
 
-  const startCrawl = async ({ platforms, keyword, start_date, end_date, onStatus }) => {
-    onStatus({ type: "info", message: `🚀 Memulai crawl untuk: "${keyword}"` });
+  const startCrawl = async ({ platforms, keyword, video_limit, start_date, end_date, onStatus }) => {
+    onStatus({ type: "info", message: `🚀 Memulai crawl untuk: "${keyword}" (Video limit: ${video_limit || 'Semua'})` });
     try {
       // Endpoint: /api/v1/crawl/start
       const res = await api.post("/crawl/start", { 
@@ -94,9 +96,13 @@ export const useCrawlStore = defineStore("crawl", () => {
   const runSentimentAnalysis = async () => {
     isAnalyzing.value = true;
     try {
-      // Endpoint: /api/v1/analysis/sentiment
-      await api.post("/analysis/sentiment");
-      // Add notification or redirect to dashboard here if needed
+      const res = await api.post("/analysis/sentiment");
+      if (res.data && res.data.status === "done") {
+        sentimentSummary.value = res.data.summary;
+        analyzedData.value = res.data.data;
+      }
+    } catch (err) {
+      console.error("Analisis sentimen gagal:", err.message);
     } finally {
       isAnalyzing.value = false;
     }
@@ -107,6 +113,8 @@ export const useCrawlStore = defineStore("crawl", () => {
     stats,
     pipelineStatus,
     isAnalyzing,
+    sentimentSummary,
+    analyzedData,
     startCrawl,
     runSentimentAnalysis,
   };

@@ -49,21 +49,44 @@
 </template>
 
 <script setup>
-const insights = [
-  {
-    icon: '📈',
-    title: 'Trend Detection',
-    content: 'Peningkatan sentimen positif sebesar 15% pada platform TikTok terkait keyword "Viral" dalam 24 jam terakhir.'
-  },
-  {
-    icon: '⚠️',
-    title: 'Crisis Alert',
-    content: 'Terdeteksi akumulasi emosi "Marah" yang signifikan di Twitter. Disarankan pemantauan ketat pada keyword "Lambat".'
-  },
-  {
-    icon: '💡',
-    title: 'Content Strategy',
-    content: 'Audiens merespon positif konten bertema "Edukasi Produk". Pertimbangkan untuk meningkatkan intensitas posting.'
+import { computed } from 'vue';
+import { useCrawlStore } from '@/stores/crawlStore';
+
+const crawlStore = useCrawlStore();
+
+const insights = computed(() => {
+  const s = crawlStore.sentimentSummary;
+
+  if (!s || s.total_comments === 0) {
+    return [
+      { icon: '⏳', title: 'Menunggu Data', content: 'Jalankan crawling dan analisis sentimen terlebih dahulu untuk melihat insights.' },
+    ];
   }
-];
+
+  const dominantLabel = s.pct_positif >= s.pct_negatif && s.pct_positif >= s.pct_netral
+    ? 'Positif'
+    : s.pct_negatif >= s.pct_netral ? 'Negatif' : 'Netral';
+
+  return [
+    {
+      icon: '📊',
+      title: 'Ringkasan Sentimen',
+      content: `Dari ${s.total_comments} komentar: ${s.pct_positif}% Positif, ${s.pct_netral}% Netral, ${s.pct_negatif}% Negatif.`
+    },
+    {
+      icon: dominantLabel === 'Positif' ? '📈' : dominantLabel === 'Negatif' ? '⚠️' : '➡️',
+      title: 'Sentimen Dominan',
+      content: `Sentimen dominan adalah ${dominantLabel} (${s['pct_' + dominantLabel.toLowerCase()]}%). ${
+        dominantLabel === 'Negatif' ? 'Disarankan pemantauan ketat pada isu-isu yang beredar.' :
+        dominantLabel === 'Positif' ? 'Persepsi publik secara umum positif terhadap topik ini.' :
+        'Publik belum menunjukkan sentimen yang kuat ke arah tertentu.'
+      }`
+    },
+    {
+      icon: '🔢',
+      title: 'Volume Data',
+      content: `Total ${s.total_comments} komentar telah dianalisis: ${s.positif} positif, ${s.netral} netral, ${s.negatif} negatif.`
+    }
+  ];
+});
 </script>

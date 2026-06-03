@@ -2,7 +2,7 @@
   <div class="flex flex-col gap-6 w-full">
     <RawStats :totalData="stats.total" :signalQuality="stats.quality" />
     <RawSnapshotTable :rows="rawData" />
-    <ObsidianPipeline :steps="pipelineSteps" @analyze="runAnalysis" @retry="handleRetry" />
+    <ObsidianPipeline :steps="pipelineSteps" :is-analyzing="isAnalyzing" @analyze="runAnalysis" @retry="handleRetry" />
   </div>
 </template>
 
@@ -17,6 +17,7 @@ const crawlStore = useCrawlStore();
 
 const stats = computed(() => crawlStore.stats);
 const rawData = computed(() => crawlStore.rawData);
+const isAnalyzing = computed(() => crawlStore.isAnalyzing);
 
 const pipelineSteps = computed(() => [
   { id: "emoji_conversion", icon: "🎭", label: "Emoji Conversion", status: crawlStore.pipelineStatus.emoji_conversion },

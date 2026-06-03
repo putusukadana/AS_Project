@@ -39,6 +39,8 @@ class ProcessedData(BaseModel):
     raw_text: str
     cleaned_text: str
     stemmed_text: str
+    sentiment_label: Optional[str] = None
+    sentiment_score: Optional[float] = None
     platform: Optional[str] = "tiktok"
     video_id: Optional[str] = None
     author: Optional[str] = None

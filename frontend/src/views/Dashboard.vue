@@ -46,26 +46,26 @@
 
           <!-- Bottom Summary Statistics -->
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 pt-4">
-            <StatCard 
-              label="Global Reach" 
-              value="2.4M" 
-              icon="🌍" 
-              :trend="12.5" 
-              variant="indigo" 
+            <StatCard
+              label="Total Komentar"
+              :value="summary?.total_comments?.toLocaleString() ?? '-'"
+              icon="💬"
+              :trend="0"
+              variant="indigo"
             />
-            <StatCard 
-              label="Active Mentions" 
-              value="84.2K" 
-              icon="📢" 
-              :trend="8.2" 
-              variant="emerald" 
+            <StatCard
+              label="Sentimen Positif"
+              :value="summary ? summary.pct_positif + '%' : '-'"
+              icon="😊"
+              :trend="summary?.pct_positif ?? 0"
+              variant="emerald"
             />
-            <StatCard 
-              label="Avg. Sentiment" 
-              value="Neutral+" 
-              icon="😊" 
-              :trend="2.4" 
-              variant="amber" 
+            <StatCard
+              label="Sentimen Negatif"
+              :value="summary ? summary.pct_negatif + '%' : '-'"
+              icon="😠"
+              :trend="-(summary?.pct_negatif ?? 0)"
+              variant="amber"
             />
           </div>
 
@@ -85,6 +85,7 @@
 </template>
 
 <script setup>
+import { computed } from 'vue';
 import AppTopbar from "@/components/layout/AppTopbar.vue";
 import AppSidebar from "@/components/layout/AppSidebar.vue";
 import SentimentDistribution from "@/components/dashboard/SentimentDistribution.vue";
@@ -92,6 +93,10 @@ import EmotionalSpectrum from "@/components/dashboard/EmotionalSpectrum.vue";
 import TopKeywords from "@/components/dashboard/TopKeywords.vue";
 import AIInsightsEngine from "@/components/dashboard/AIInsightsEngine.vue";
 import StatCard from "@/components/dashboard/StatCard.vue";
+import { useCrawlStore } from '@/stores/crawlStore';
+
+const crawlStore = useCrawlStore();
+const summary = computed(() => crawlStore.sentimentSummary);
 </script>
 
 <style>
