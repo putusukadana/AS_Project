@@ -15,6 +15,8 @@ export const useCrawlStore = defineStore("crawl", () => {
   const isAnalyzing = ref(false);
   const sentimentSummary = ref(null);
   const analyzedData = ref([]);
+  const pipelineMeta = ref({});
+  const keywords = ref({ overall: [], by_label: {} });
 
   const startCrawl = async ({ platforms, keyword, video_limit, start_date, end_date, onStatus }) => {
     onStatus({ type: "info", message: `🚀 Memulai crawl untuk: "${keyword}" (Video limit: ${video_limit || 'Semua'})` });
@@ -29,6 +31,8 @@ export const useCrawlStore = defineStore("crawl", () => {
       });
       rawData.value = res.data.data;
       stats.value = { total: res.data.total, quality: res.data.signal_quality };
+      pipelineMeta.value = {};
+      keywords.value = { overall: [], by_label: {} };
       onStatus({
         type: "success",
         message: `✅ ${res.data.total} data berhasil dikumpulkan`,
@@ -69,6 +73,13 @@ export const useCrawlStore = defineStore("crawl", () => {
         if (res.data && res.data.data) {
           rawData.value = res.data.data;
         }
+
+        if (res.data && res.data.meta) {
+          pipelineMeta.value = {
+            ...pipelineMeta.value,
+            [step]: res.data.meta
+          };
+        }
         
         pipelineStatus.value[step] = "done";
         if (onStatus) onStatus({ type: "success", message: `✅ ${displayStep} selesai` });
@@ -100,11 +111,26 @@ export const useCrawlStore = defineStore("crawl", () => {
       if (res.data && res.data.status === "done") {
         sentimentSummary.value = res.data.summary;
         analyzedData.value = res.data.data;
+        await fetchKeywords();
       }
     } catch (err) {
       console.error("Analisis sentimen gagal:", err.message);
     } finally {
       isAnalyzing.value = false;
+    }
+  };
+
+  const fetchKeywords = async () => {
+    try {
+      const res = await api.post("/analysis/keywords");
+      if (res.data && res.data.status === "done") {
+        keywords.value = {
+          overall: res.data.overall,
+          by_label: res.data.by_label
+        };
+      }
+    } catch (err) {
+      console.error("Gagal mengambil keywords:", err.message);
     }
   };
 
@@ -115,7 +141,10 @@ export const useCrawlStore = defineStore("crawl", () => {
     isAnalyzing,
     sentimentSummary,
     analyzedData,
+    pipelineMeta,
+    keywords,
     startCrawl,
     runSentimentAnalysis,
+    fetchKeywords,
   };
 });

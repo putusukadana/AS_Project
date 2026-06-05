@@ -112,6 +112,15 @@ def set_current_data(data):
         print(f"Error initializing data: {e}")
         _current_data = []
 
+def _pipeline_meta():
+    total_videos = len(_current_data)
+    total_comments = sum(
+        len(v.get("comment_sample", []))
+        for v in _current_data
+        if "comment_sample" in v
+    )
+    return {"total_videos": total_videos, "total_comments": total_comments}
+
 async def run_emoji_conversion():
     try:
         for video in _current_data:
@@ -119,7 +128,7 @@ async def run_emoji_conversion():
                 for comment in video['comment_sample']:
                     if 'text' in comment:
                         comment['text'] = konversi_emoji(comment['text'])
-        return {"status": "done", "step": "emoji_conversion", "data": _current_data}
+        return {"status": "done", "step": "emoji_conversion", "data": _current_data, "meta": _pipeline_meta()}
     except Exception as e:
         return {"status": "error", "step": "emoji_conversion", "message": str(e)}
 
@@ -130,7 +139,7 @@ async def run_cleansing():
                 for comment in video['comment_sample']:
                     if 'text' in comment:
                         comment['text'] = clean_text(comment['text'])
-        return {"status": "done", "step": "cleansed", "data": _current_data}
+        return {"status": "done", "step": "cleansed", "data": _current_data, "meta": _pipeline_meta()}
     except Exception as e:
         return {"status": "error", "step": "cleansed", "message": str(e)}
 
@@ -141,7 +150,7 @@ async def run_normalization():
                 for comment in video['comment_sample']:
                     if 'text' in comment:
                         comment['text'] = normalisasi_slang(comment['text'])
-        return {"status": "done", "step": "normalized", "data": _current_data}
+        return {"status": "done", "step": "normalized", "data": _current_data, "meta": _pipeline_meta()}
     except Exception as e:
         return {"status": "error", "step": "normalized", "message": str(e)}
 
@@ -152,19 +161,26 @@ async def run_stopwords():
                 for comment in video['comment_sample']:
                     if 'text' in comment:
                         comment['text'] = stopword_remover.remove(comment['text'])
-        return {"status": "done", "step": "stopwords", "data": _current_data}
+        return {"status": "done", "step": "stopwords", "data": _current_data, "meta": _pipeline_meta()}
     except Exception as e:
         return {"status": "error", "step": "stopwords", "message": str(e)}
 
 async def run_stemming():
     try:
         processed_items = []
+        total_skipped = 0
         for video in _current_data:
             if 'comment_sample' in video:
-                for comment in video['comment_sample']:
+                for comment in video['comment_sample'][:]:
                     if 'text' in comment:
                         stemmed = stem_text(comment['text'])
                         comment['stemmed_text'] = stemmed
+                        
+                        # Skip jika stemmed kosong
+                        if not stemmed or stemmed.strip() == "":
+                            video["comment_sample"].remove(comment)
+                            total_skipped += 1
+                            continue
                         
                         processed_obj = ProcessedData(
                             raw_text=comment.get('raw_text') or comment.get('text') or "",
@@ -177,10 +193,13 @@ async def run_stemming():
                         )
                         processed_items.append(processed_obj)
         
+        meta = _pipeline_meta()
+        meta["total_filtered"] = total_skipped
+        
         if processed_items:
             await save_processed_data(processed_items)
                 
-        return {"status": "done", "step": "stemming", "data": _current_data}
+        return {"status": "done", "step": "stemming", "data": _current_data, "meta": meta}
     except Exception as e:
         print(f"Internal Stemming Error: {e}")
         return {"status": "error", "step": "stemming", "message": "Terjadi kesalahan pada sistem pemrosesan stemming."}

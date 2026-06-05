@@ -24,14 +24,14 @@
           <!-- Main Dashboard Grid -->
           <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-6">
             <!-- Sentiment Distribution (Large) -->
-            <div class="xl:col-span-2">
+            <div class="xl:col-span-3">
               <SentimentDistribution />
             </div>
             
             <!-- Emotional Spectrum -->
-            <div class="xl:col-span-1">
+            <!-- <div class="xl:col-span-1">
               <EmotionalSpectrum />
-            </div>
+            </div> -->
             
             <!-- AI Insights -->
             <div class="xl:col-span-1">

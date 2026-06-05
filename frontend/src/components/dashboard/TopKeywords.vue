@@ -3,18 +3,18 @@
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
       <div>
         <h3 class="text-xl font-black text-slate-900 tracking-tight">Top Keywords</h3>
-        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Trending Topics</p>
+        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">{{ totalUnique }} Unique Keywords</p>
       </div>
-      
+
       <!-- Filter Tabs -->
       <div class="flex bg-slate-100 p-1 rounded-xl">
-        <button 
-          v-for="f in filters" 
-          :key="f.id"
-          @click="activeFilter = f.id"
+        <button
+          v-for="f in filters"
+          :key="f.key"
+          @click="activeFilter = f.key"
           class="px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-tight transition-all"
-          :class="activeFilter === f.id 
-            ? 'bg-white text-indigo-600 shadow-sm' 
+          :class="activeFilter === f.key
+            ? 'bg-white text-indigo-600 shadow-sm'
             : 'text-slate-500 hover:text-slate-700'"
         >
           {{ f.label }}
@@ -23,63 +23,78 @@
     </div>
 
     <div class="flex flex-wrap gap-2 overflow-y-auto max-h-[300px] pr-2 custom-scrollbar">
-      <div 
-        v-for="kw in filteredKeywords" 
+      <div
+        v-for="kw in filteredKeywords"
         :key="kw.text"
         class="group flex items-center gap-2 px-4 py-2 bg-slate-50 border border-slate-100 rounded-2xl hover:border-indigo-200 hover:bg-white hover:shadow-sm transition-all cursor-default"
       >
         <span class="text-xs font-bold text-slate-700">{{ kw.text }}</span>
-        <span class="text-[10px] font-black px-1.5 py-0.5 rounded-lg" :class="sentimentColor(kw.sentiment)">
+        <span class="text-[10px] font-black px-1.5 py-0.5 rounded-lg" :class="sentimentBadge(kw)">
           {{ kw.count }}
         </span>
       </div>
     </div>
 
+    <div v-if="filteredKeywords.length === 0" class="flex-1 flex items-center justify-center py-10">
+      <div class="text-center">
+        <span class="text-4xl">📭</span>
+        <p class="text-sm font-bold text-slate-400 mt-2">Belum ada data keywords</p>
+        <p class="text-[10px] font-medium text-slate-300 mt-1">Jalankan crawling dan analisis sentimen terlebih dahulu.</p>
+      </div>
+    </div>
+
     <div class="mt-auto pt-6 border-t border-slate-50 flex items-center justify-between">
-      <span class="text-[10px] font-bold text-slate-400">Total Unique: 1,240</span>
-      <button class="text-[10px] font-black text-indigo-600 hover:underline">View All Keywords</button>
+      <span class="text-[10px] font-bold text-slate-400">Total Unique: {{ totalUnique }}</span>
     </div>
   </div>
 </template>
 
 <script setup>
 import { ref, computed } from 'vue';
+import { useCrawlStore } from '@/stores/crawlStore';
+
+const crawlStore = useCrawlStore();
 
 const activeFilter = ref('all');
 
 const filters = [
-  { id: 'all', label: 'All' },
-  { id: 'pos', label: 'Positive' },
-  { id: 'neu', label: 'Neutral' },
-  { id: 'neg', label: 'Negative' },
+  { key: 'all', label: 'All' },
+  { key: 'Positif', label: 'Positive' },
+  { key: 'Netral', label: 'Neutral' },
+  { key: 'Negatif', label: 'Negative' },
 ];
 
-const keywords = [
-  { text: 'Viral', count: 850, sentiment: 'pos' },
-  { text: 'Terpercaya', count: 720, sentiment: 'pos' },
-  { text: 'Kualitas', count: 640, sentiment: 'pos' },
-  { text: 'Mahal', count: 520, sentiment: 'neg' },
-  { text: 'Lambat', count: 480, sentiment: 'neg' },
-  { text: 'Standar', count: 420, sentiment: 'neu' },
-  { text: 'Cukup', count: 390, sentiment: 'neu' },
-  { text: 'Bagus', count: 350, sentiment: 'pos' },
-  { text: 'Kecewa', count: 310, sentiment: 'neg' },
-  { text: 'Update', count: 280, sentiment: 'neu' },
-  { text: 'Rekomendasi', count: 250, sentiment: 'pos' },
-  { text: 'Error', count: 210, sentiment: 'neg' },
-  { text: 'Normal', count: 180, sentiment: 'neu' },
-  { text: 'Mantap', count: 150, sentiment: 'pos' },
-];
+const keywords = computed(() => crawlStore.keywords);
 
 const filteredKeywords = computed(() => {
-  if (activeFilter.value === 'all') return keywords;
-  return keywords.filter(k => k.sentiment === activeFilter.value);
+  if (activeFilter.value === 'all') {
+    return keywords.value.overall || [];
+  }
+  return keywords.value.by_label?.[activeFilter.value] || [];
 });
 
-const sentimentColor = (s) => {
-  if (s === 'pos') return 'bg-blue-100 text-blue-600';
-  if (s === 'neg') return 'bg-red-100 text-red-600';
-  return 'bg-slate-200 text-slate-600';
+const totalUnique = computed(() => keywords.value.overall?.length || 0);
+
+const sentimentBadge = (kw) => {
+  const byLabel = keywords.value.by_label;
+  if (!byLabel) return 'bg-slate-200 text-slate-600';
+
+  const counts = {
+    Positif: byLabel.Positif?.find(k => k.text === kw.text)?.count || 0,
+    Netral: byLabel.Netral?.find(k => k.text === kw.text)?.count || 0,
+    Negatif: byLabel.Negatif?.find(k => k.text === kw.text)?.count || 0,
+  };
+
+  const maxCount = Math.max(counts.Positif, counts.Netral, counts.Negatif);
+  const dominant = maxCount === counts.Positif ? 'pos'
+    : maxCount === counts.Negatif ? 'neg'
+    : 'neu';
+
+  return {
+    pos: 'bg-blue-100 text-blue-600',
+    neu: 'bg-slate-200 text-slate-600',
+    neg: 'bg-red-100 text-red-600',
+  }[dominant];
 };
 </script>
 

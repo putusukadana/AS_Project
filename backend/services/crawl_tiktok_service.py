@@ -10,7 +10,8 @@ load_dotenv()
 
 # --- Configuration & Global Rate Limiting ---
 # RAPIDAPI_KEY = os.getenv("RAPIDAPI_KEY", "e0efe95aefmsh313499f65d0af00p165956jsn75b9820f7c78")
-RAPIDAPI_KEY = os.getenv("RAPIDAPI_KEY", "d501fae7bfmsh3f1de8ef5dc24d3p1d9ebejsnabaf8a976a3e")
+# RAPIDAPI_KEY = os.getenv("RAPIDAPI_KEY", "d501fae7bfmsh3f1de8ef5dc24d3p1d9ebejsnabaf8a976a3e")
+RAPIDAPI_KEY = os.getenv("RAPIDAPI_KEY", "be509759b4msh580c88fc4d5a1c3p16e9fbjsn51f12c5b1b26")
 RAPIDAPI_HOST = "tiktok-api23.p.rapidapi.com"
 
 # Track last request to ensure 1 request/second (approx 1.1s safety)
