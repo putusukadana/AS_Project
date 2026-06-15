@@ -1,7 +1,7 @@
 import re
 import emoji
 import pandas as pd
-import os
+
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 from database import db
@@ -20,24 +20,7 @@ except Exception as e:
     print(f"Peringatan: Gagal memuat kamus alay dari URL. Error: {e}")
     slang_dict = {}
 
-# 2. InSet Sentiment Lexicon
-def load_kamus_sentimen(filepath):
-    try:
-        if not os.path.exists(filepath):
-            base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-            filepath = os.path.join(base_dir, filepath.replace("/", "\\"))
-            
-        df = pd.read_csv(filepath, sep='\t')
-        return dict(zip(df['word'].str.lower(), df['weight']))
-    except Exception as e:
-        print(f"Gagal memuat kamus sentimen: {filepath}. Error: {e}")
-        return {}
 
-base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-path_pos = os.path.join(base_dir, "resources", "InSet", "positive.tsv")
-path_neg = os.path.join(base_dir, "resources", "InSet", "negative.tsv")
-pos_kamus = load_kamus_sentimen(path_pos)
-neg_kamus = load_kamus_sentimen(path_neg)
 
 # 3. Sastrawi Stopword Remover
 factory = StopWordRemoverFactory()
@@ -73,19 +56,7 @@ def stem_text(teks: str) -> str:
         return ""
     return stemmer.stem(teks)
 
-def skor_sentimen(teks: str) -> float:
-    if not isinstance(teks, str):
-        return 0.0
-    skor = 0.0
-    for kata in teks.lower().split():
-        skor += pos_kamus.get(kata, 0)
-        skor += neg_kamus.get(kata, 0)
-    return skor
 
-def label_sentimen(skor: float) -> str:
-    if skor > 0: return 'Positif'
-    elif skor < 0: return 'Negatif'
-    else: return 'Netral'
 
 async def save_processed_data(data: List[ProcessedData]):
     if not data: return
