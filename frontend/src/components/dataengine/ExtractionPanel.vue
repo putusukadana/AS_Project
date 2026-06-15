@@ -1,13 +1,13 @@
 <template>
   <section class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm shadow-slate-200/50">
-    <div class="flex items-center justify-between mb-6">
+    <div class="flex flex-col gap-4 mb-6">
       <h2 class="text-xl font-bold text-slate-900 flex items-center gap-2">
         <span>⚙️</span> Extraction Parameters
       </h2>
       <!-- Mode Switcher -->
-      <div class="flex bg-slate-100 p-1 rounded-xl">
+      <div class="flex bg-slate-100 p-1 rounded-xl self-start">
         <button 
-          v-for="mode in ['keyword', 'url']" 
+          v-for="mode in ['keyword', 'url', 'upload']" 
           :key="mode"
           class="px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wider transition-all"
           :class="extractionMode === mode ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'"
@@ -38,7 +38,7 @@
     </div>
 
     <!-- Input Area -->
-    <div class="mt-8 space-y-3">
+    <div class="mt-8 space-y-3" v-if="extractionMode !== 'upload'">
       <div class="flex items-center justify-between">
         <label for="keyword-input" class="block text-sm font-bold text-slate-500 uppercase tracking-wider">
           {{ extractionMode === 'keyword' ? 'Kata Kunci Target' : 'URL Video TikTok' }}
@@ -79,8 +79,67 @@
       </p>
     </div>
 
+    <!-- Upload File Area -->
+    <div v-if="extractionMode === 'upload'" class="mt-8 space-y-3">
+      <label class="block text-sm font-bold text-slate-500 uppercase tracking-wider">Upload Dataset</label>
+      
+      <!-- Drag & Drop Zone -->
+      <div
+        class="relative border-2 border-dashed rounded-xl p-8 text-center transition-all cursor-pointer"
+        :class="isDragOver 
+          ? 'border-indigo-400 bg-indigo-50' 
+          : 'border-slate-200 bg-slate-50 hover:border-slate-300 hover:bg-slate-100'"
+        @dragover.prevent="isDragOver = true"
+        @dragleave.prevent="isDragOver = false"
+        @drop.prevent="handleFileDrop"
+        @click="$refs.fileInput.click()"
+      >
+        <input
+          ref="fileInput"
+          type="file"
+          accept=".csv,.json,.xlsx,.xls"
+          class="hidden"
+          @change="handleFileSelect"
+        />
+
+        <!-- Empty State -->
+        <div v-if="!uploadedFile">
+          <span class="text-4xl block mb-3">📂</span>
+          <p class="text-sm font-bold text-slate-600">
+            Drag & drop file di sini, atau <span class="text-indigo-600 underline">browse</span>
+          </p>
+          <p class="text-[11px] text-slate-400 mt-2 font-medium">
+            Format: .xlsx, .csv, .json — Maks 10MB
+          </p>
+        </div>
+
+        <!-- File Selected State -->
+        <div v-else class="flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <span class="text-2xl">
+              {{ uploadedFile.name.endsWith('.csv') ? '📊' : uploadedFile.name.endsWith('.json') ? '📋' : '📗' }}
+            </span>
+            <div class="text-left">
+              <p class="text-sm font-bold text-slate-800 truncate max-w-[200px]">{{ uploadedFile.name }}</p>
+              <p class="text-[11px] text-slate-400 font-medium">{{ (uploadedFile.size / 1024).toFixed(1) }} KB</p>
+            </div>
+          </div>
+          <button
+            class="text-xs font-bold text-rose-500 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 px-3 py-1.5 rounded-lg transition-all"
+            @click.stop="uploadedFile = null"
+          >
+            ✕ Hapus
+          </button>
+        </div>
+      </div>
+
+      <p class="text-[11px] text-slate-400 pl-1 font-medium italic">
+        * File harus memiliki kolom teks (misal: "text", "comment", "review", "content"). Kolom pertama akan digunakan jika tidak terdeteksi.
+      </p>
+    </div>
+
     <!-- Jumlah Video -->
-    <div class="mt-6 space-y-3" :class="{ 'opacity-30 pointer-events-none': extractionMode === 'url' }">
+    <div class="mt-6 space-y-3" v-if="extractionMode !== 'upload'" :class="{ 'opacity-30 pointer-events-none': extractionMode === 'url' }">
       <label class="block text-sm font-bold text-slate-500 uppercase tracking-wider">Jumlah Video</label>
       <div class="relative group">
         <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors">🎬</span>
@@ -98,7 +157,7 @@
     </div>
 
     <!-- Rentang Waktu -->
-    <div class="mt-8 space-y-3" :class="{ 'opacity-30 pointer-events-none': extractionMode === 'url' }">
+    <div class="mt-8 space-y-3" v-if="extractionMode !== 'upload'" :class="{ 'opacity-30 pointer-events-none': extractionMode === 'url' }">
       <label class="block text-sm font-bold text-slate-500 uppercase tracking-wider">Rentang Waktu</label>
       <div class="grid grid-cols-2 gap-4">
         <div class="space-y-1.5">
@@ -123,11 +182,11 @@
     <!-- Tombol Aksi -->
     <button
       class="w-full p-4 bg-indigo-600 text-white rounded-xl font-bold mt-8 shadow-lg shadow-indigo-100 hover:bg-indigo-700 hover:-translate-y-0.5 transition-all active:scale-95 disabled:opacity-50 disabled:translate-y-0 disabled:shadow-none"
-      :disabled="!canCrawl || isCrawling"
+      :disabled="!canCrawl || isCrawling || isUploading"
       @click="startCrawl"
     >
-      <span v-if="isCrawling" class="animate-spin mr-2 inline-block">⏳</span>
-      {{ isCrawling ? "Crawling Data..." : "🚀 Mulai Crawling" }}
+      <span v-if="isCrawling || isUploading" class="animate-spin mr-2 inline-block">⏳</span>
+      {{ isUploading ? "Memproses File..." : isCrawling ? "Crawling Data..." : extractionMode === 'upload' ? "📁 Mulai Proses File" : "🚀 Mulai Crawling" }}
     </button>
 
     <!-- Status Crawling Real-time -->
@@ -163,15 +222,18 @@ const platforms = [
   { id: "facebook", icon: "👤", label: "Facebook" },
 ];
 
-const extractionMode = ref("keyword"); // 'keyword' | 'url'
+const extractionMode = ref("keyword"); // 'keyword' | 'url' | 'upload'
 const selectedPlatforms = ref(["tiktok"]);
 const keyword = ref("");
 const startDate = ref("");
 const endDate = ref("");
 const isCrawling = ref(false);
 const crawlStatus = ref([]);
+const uploadedFile = ref(null);
+const isDragOver = ref(false);
 
 const canCrawl = computed(() => {
+  if (extractionMode.value === "upload") return uploadedFile.value !== null;
   if (extractionMode.value === "url") return keyword.value.trim().includes("tiktok.com");
   return selectedPlatforms.value.length > 0 && keyword.value.trim().length > 0;
 });
@@ -184,8 +246,59 @@ const togglePlatform = (id) => {
 
 const formatNow = () => new Date().toLocaleTimeString('id-ID', { hour12: false });
 
+const isUploading = ref(false);
+
+const handleFileDrop = (event) => {
+  isDragOver.value = false;
+  const files = event.dataTransfer.files;
+  if (files.length > 0) {
+    validateAndSetFile(files[0]);
+  }
+};
+
+const handleFileSelect = (event) => {
+  const files = event.target.files;
+  if (files.length > 0) {
+    validateAndSetFile(files[0]);
+  }
+};
+
+const validateAndSetFile = (file) => {
+  const allowedExts = [".csv", ".json", ".xlsx", ".xls"];
+  const ext = "." + file.name.split(".").pop().toLowerCase();
+  
+  if (!allowedExts.includes(ext)) {
+    alert("Format file tidak didukung. Gunakan .csv, .json, atau .xlsx");
+    return;
+  }
+  
+  if (file.size > 10 * 1024 * 1024) {
+    alert("Ukuran file melebihi 10MB");
+    return;
+  }
+  
+  uploadedFile.value = file;
+};
+
 const startCrawl = async () => {
   if (!canCrawl.value || isCrawling.value) return;
+
+  // Mode Upload
+  if (extractionMode.value === "upload") {
+    isUploading.value = true;
+    crawlStatus.value = [];
+    try {
+      await crawlStore.uploadFile({
+        file: uploadedFile.value,
+        onStatus: (log) => {
+          crawlStatus.value.push(log);
+        },
+      });
+    } finally {
+      isUploading.value = false;
+    }
+    return;
+  }
   
   isCrawling.value = true;
   crawlStatus.value = [];

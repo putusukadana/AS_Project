@@ -1,11 +1,11 @@
 <template>
-    <!-- Dataset Summary -->
+    <!-- Data Summary -->
     <div v-if="crawlStore.pipelineStatus.stemming === 'done'" class="bg-white/80 backdrop-blur-xl border border-slate-200/60 rounded-3xl p-6 shadow-2xl shadow-slate-200/40">
       <div class="flex items-center gap-3 mb-5">
         <div class="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center text-lg border border-indigo-100">
           📋
         </div>
-        <h4 class="text-lg font-black text-slate-900 tracking-tight">Dataset Summary</h4>
+        <h4 class="text-lg font-black text-slate-900 tracking-tight">Data Summary</h4>
       </div>
       <div class="grid grid-cols-3 gap-4">
         <div class="bg-slate-50 rounded-2xl p-4 border border-slate-100 text-center">

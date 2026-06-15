@@ -33,6 +33,7 @@
 
 <script setup>
 import { computed } from "vue";
+import { useRouter } from "vue-router";
 import RawStats from "./RawStats.vue";
 import RawSnapshotTable from "./RawSnapshotTable.vue";
 import ObsidianPipeline from "./ObsidianPipeline.vue";
@@ -40,6 +41,7 @@ import DataSummary from "./DataSummary.vue";
 import { useCrawlStore } from "@/stores/crawlStore";
 
 const crawlStore = useCrawlStore();
+const router = useRouter();
 
 const stats = computed(() => crawlStore.stats);
 const rawData = computed(() => crawlStore.rawData);
@@ -57,6 +59,9 @@ const pipelineSteps = computed(() => [
 
 const runAnalysis = async () => {
   await crawlStore.runSentimentAnalysis();
+  if (crawlStore.analyzedData && crawlStore.analyzedData.length > 0) {
+    router.push("/dashboard");
+  }
 };
 
 const handleRetry = async (stepId) => {

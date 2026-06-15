@@ -18,6 +18,42 @@ export const useCrawlStore = defineStore("crawl", () => {
   const pipelineMeta = ref({});
   const keywords = ref({ overall: [], by_label: {} });
 
+  const uploadFile = async ({ file, onStatus }) => {
+    onStatus({ type: "info", message: `📁 Mengupload file: ${file.name} (${(file.size / 1024).toFixed(1)} KB)` });
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await api.post("/upload/file", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      if (res.data.status === "error") {
+        onStatus({ type: "error", message: `❌ ${res.data.message}` });
+        return;
+      }
+
+      rawData.value = res.data.data;
+      stats.value = { total: res.data.total, quality: res.data.signal_quality };
+      pipelineMeta.value = {};
+      keywords.value = { overall: [], by_label: {} };
+
+      pipelineStatus.value = {
+        emoji_conversion: "idle",
+        cleansing: "idle",
+        normalization: "idle",
+        stopwords: "idle",
+        stemming: "idle",
+      };
+
+      onStatus({ type: "success", message: `✅ ${res.data.total} baris data berhasil dimuat — ${res.data.message}` });
+
+      await runPipeline(onStatus);
+    } catch (err) {
+      onStatus({ type: "error", message: `❌ Upload gagal: ${err.message}` });
+    }
+  };
+
   const startCrawl = async ({ platforms, keyword, video_limit, start_date, end_date, onStatus }) => {
     onStatus({ type: "info", message: `🚀 Memulai crawl untuk: "${keyword}" (Video limit: ${video_limit || 'Semua'})` });
     try {
@@ -144,6 +180,7 @@ export const useCrawlStore = defineStore("crawl", () => {
     pipelineMeta,
     keywords,
     startCrawl,
+    uploadFile,
     runSentimentAnalysis,
     fetchKeywords,
   };

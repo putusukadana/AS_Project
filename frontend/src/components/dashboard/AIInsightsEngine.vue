@@ -40,11 +40,11 @@
       </div>
     </div>
 
-    <div class="mt-auto pt-6 relative z-10">
+    <!-- <div class="mt-auto pt-6 relative z-10">
       <button class="w-full py-3 bg-white text-indigo-600 rounded-xl font-black text-xs shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all active:scale-95">
         REGENERATE INSIGHTS
       </button>
-    </div>
+    </div> -->
   </div>
 </template>
 
