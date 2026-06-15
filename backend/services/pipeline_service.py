@@ -19,9 +19,6 @@ try:
 except Exception as e:
     print(f"Peringatan: Gagal memuat kamus alay dari URL. Error: {e}")
     slang_dict = {}
-
-
-
 # 3. Sastrawi Stopword Remover
 factory = StopWordRemoverFactory()
 stopword_remover = factory.create_stop_word_remover()
@@ -55,8 +52,6 @@ def stem_text(teks: str) -> str:
     if not isinstance(teks, str):
         return ""
     return stemmer.stem(teks)
-
-
 
 async def save_processed_data(data: List[ProcessedData]):
     if not data: return
