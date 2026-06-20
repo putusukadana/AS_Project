@@ -12,6 +12,7 @@
 </template>
 
 <script setup>
+// TODO: Connect to crawlStore when backend API is ready
 import { Bar } from 'vue-chartjs';
 import {
   Chart as ChartJS,
@@ -25,6 +26,7 @@ import {
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
+// TODO: Replace dummy data with real data from crawlStore
 const chartData = {
   labels: ['Senang', 'Marah', 'Sedih', 'Takut', 'Terkejut', 'Lainnya'],
   datasets: [

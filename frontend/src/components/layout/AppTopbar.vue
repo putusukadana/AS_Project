@@ -9,28 +9,9 @@
 
     <!-- Right Actions -->
     <div class="flex items-center gap-4">
-      <!-- Search Input -->
-      <!-- <div class="hidden md:flex items-center bg-slate-100 rounded-full px-4 py-1.5 border border-transparent focus-within:border-indigo-300 focus-within:bg-white transition-all">
-        <span class="text-slate-400 mr-2 text-sm">🔍</span>
-        <input 
-          type="text" 
-          placeholder="Search something..." 
-          class="bg-transparent border-none outline-none text-sm text-slate-700 w-48 placeholder:text-slate-400"
-        />
-      </div> -->
-
-      <!-- Stats & Reports -->
-      <!-- <div class="hidden lg:flex items-center gap-4 mr-2">
-        <div class="flex flex-col items-end">
-          <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Last Update</span>
-          <span class="text-[11px] font-bold text-slate-500">2 min ago</span>
-        </div>
-      </div> -->
-
       <!-- Notifications -->
-      <button class="relative p-2 text-slate-500 hover:text-slate-900 transition-colors">
+      <button disabled title="Coming Soon" class="relative p-2 text-slate-400 cursor-not-allowed opacity-50 transition-colors">
         <span class="text-xl">🔔</span>
-        <span class="absolute top-1 right-1 bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full border-2 border-white">3</span>
       </button>
 
       <!-- User Profile Dropdown -->
@@ -75,7 +56,12 @@ import { useRouter } from "vue-router";
 const router = useRouter();
 const showDropdown = ref(false);
 const dropdownContainer = ref(null);
-const user = JSON.parse(localStorage.getItem('user') || '{}');
+let user = {};
+try {
+  user = JSON.parse(localStorage.getItem('user') || '{}');
+} catch (e) {
+  console.error("Failed to parse user from localStorage:", e);
+}
 
 const toggleDropdown = () => {
   showDropdown.value = !showDropdown.value;

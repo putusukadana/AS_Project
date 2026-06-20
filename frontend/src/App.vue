@@ -1,9 +1,10 @@
 <script setup>
-// Main layout component using router-view
+import Toast from 'primevue/toast'
 </script>
 
 <template>
   <div class="h-screen w-screen m-0 p-0 overflow-hidden font-sans">
+    <Toast position="top-right" />
     <router-view v-slot="{ Component }">
       <transition name="fade" mode="out-in">
         <component :is="Component" />

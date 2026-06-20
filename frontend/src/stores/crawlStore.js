@@ -1,6 +1,7 @@
 import { defineStore } from "pinia";
 import { ref } from "vue";
-import api from "@/services/api"; // Ensure this service exists
+import api from "@/services/api";
+import { useToast } from "primevue/usetoast";
 
 export const useCrawlStore = defineStore("crawl", () => {
   const rawData = ref([]);
@@ -151,6 +152,8 @@ export const useCrawlStore = defineStore("crawl", () => {
       }
     } catch (err) {
       console.error("Analisis sentimen gagal:", err.message);
+      const toast = useToast();
+      toast.add({ severity: 'error', summary: 'Error', detail: 'Analisis sentimen gagal: ' + err.message, life: 3000 });
     } finally {
       isAnalyzing.value = false;
     }
@@ -167,6 +170,8 @@ export const useCrawlStore = defineStore("crawl", () => {
       }
     } catch (err) {
       console.error("Gagal mengambil keywords:", err.message);
+      const toast = useToast();
+      toast.add({ severity: 'error', summary: 'Error', detail: 'Gagal mengambil keywords: ' + err.message, life: 3000 });
     }
   };
 
@@ -181,6 +186,8 @@ export const useCrawlStore = defineStore("crawl", () => {
     keywords,
     startCrawl,
     uploadFile,
+    runPipeline,
+    retryStep,
     runSentimentAnalysis,
     fetchKeywords,
   };

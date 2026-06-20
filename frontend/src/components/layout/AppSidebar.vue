@@ -42,18 +42,10 @@
           <span class="text-[10px] uppercase tracking-tighter font-black text-indigo-400">Account Status</span>
           <span class="text-[10px] px-2 py-0.5 bg-indigo-100 text-indigo-600 rounded-full font-bold">Free Version</span>
         </div>
-        <button class="w-full py-2 bg-white text-indigo-600 text-xs font-black rounded-lg border border-indigo-200 shadow-sm hover:bg-indigo-600 hover:text-white transition-all transform hover:-translate-y-0.5 active:scale-95">
-          ✨ UPGRADE PLAN
+        <button disabled title="Coming Soon" class="w-full py-2 bg-slate-100 text-slate-400 text-xs font-black rounded-lg border border-slate-200 cursor-not-allowed opacity-60">
+          ✨ UPGRADE PLAN (Coming Soon)
         </button>
       </div>
-      
-      <!-- <router-link
-        v-if="showNewCrawl"
-        to="/data-engine"
-        class="flex items-center justify-center gap-2 w-full py-3.5 bg-indigo-600 text-white text-center rounded-xl no-underline font-bold shadow-lg shadow-indigo-100 hover:bg-indigo-700 hover:-translate-y-0.5 transition-all active:scale-95"
-      >
-        🚀 New Crawl
-      </router-link> -->
     </div>
   </aside>
 </template>

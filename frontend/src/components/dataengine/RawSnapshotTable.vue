@@ -104,16 +104,26 @@ const summaries = computed(() => {
   return Object.values(groups);
 });
 
+const escapeHTML = (str) => {
+  if (!str) return '';
+  return str.toString()
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+};
+
 const openPreview = (summary) => {
   if (!summary.sampleComments || summary.sampleComments.length === 0) return;
   
   const commentsHtml = summary.sampleComments.map(c => `
     <tr style="border-bottom: 1px solid #f1f5f9; vertical-align: top;">
-      <td style="padding: 12px; font-size: 13px; color: #1e293b; font-weight: 600; width: 120px;">@${c.user_unique_id || 'user'}</td>
-      <td style="padding: 12px; font-size: 13px; color: #64748b; font-style: italic; background: #fcfcfc;">${c.raw_text || '-'}</td>
-      <td style="padding: 12px; font-size: 13px; color: #475569;">${c.text || '-'}</td>
+      <td style="padding: 12px; font-size: 13px; color: #1e293b; font-weight: 600; width: 120px;">@${escapeHTML(c.user_unique_id) || 'user'}</td>
+      <td style="padding: 12px; font-size: 13px; color: #64748b; font-style: italic; background: #fcfcfc;">${escapeHTML(c.raw_text) || '-'}</td>
+      <td style="padding: 12px; font-size: 13px; color: #475569;">${escapeHTML(c.text) || '-'}</td>
       <td style="padding: 12px; font-size: 13px; color: #1e293b; font-weight: 600; background: #f8fafc;">
-        ${c.stemmed_text || '<span style="color: #94a3b8; font-style: italic;">Belum Di-stemming</span>'}
+        ${c.stemmed_text ? escapeHTML(c.stemmed_text) : '<span style="color: #94a3b8; font-style: italic;">Belum Di-stemming</span>'}
       </td>
     </tr>
   `).join('');

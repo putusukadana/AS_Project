@@ -18,18 +18,6 @@ const routes = [
     component: () => import('@/views/DataEngine.vue'),
     meta: { requiresAuth: true }
   },
-  {
-    path: '/dashboard',
-    name: 'Dashboard',
-    component: () => import('@/views/Dashboard.vue'),
-    meta: { requiresAuth: true }
-  },
-  {
-    path: '/data-engine',
-    name: 'DataEngine',
-    component: () => import('@/views/DataEngine.vue'),
-    meta: { requiresAuth: true }
-  },
   ...authRoutes
 ]
 

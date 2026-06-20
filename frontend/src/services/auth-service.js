@@ -5,7 +5,8 @@ const register = async (userData) => {
     const response = await api.post('/users', userData)
     return response.data
   } catch (error) {
-    throw error.response?.data?.detail?.message || 'An error occurred during registration.'
+    const message = error.response?.data?.detail?.message || 'An error occurred during registration.'
+    throw new Error(message)
   }
 }
 
@@ -14,7 +15,8 @@ const login = async (credentials) => {
     const response = await api.post('/users/login', credentials)
     return response.data
   } catch (error) {
-    throw error.response?.data?.detail?.message || 'An error occurred during login.'
+    const message = error.response?.data?.detail?.message || 'An error occurred during login.'
+    throw new Error(message)
   }
 }
 

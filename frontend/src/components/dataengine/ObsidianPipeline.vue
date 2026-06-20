@@ -139,11 +139,14 @@
 
 <script setup>
 import { computed } from "vue";
+import { useCrawlStore } from "@/stores/crawlStore";
+
+const crawlStore = useCrawlStore();
+const pipelineMeta = computed(() => crawlStore.pipelineMeta);
 
 const props = defineProps({
   steps: { type: Array, required: true },
-  isAnalyzing: { type: Boolean, default: false },
-  pipelineMeta: { type: Object, default: () => ({}) }
+  isAnalyzing: { type: Boolean, default: false }
 });
 
 defineEmits(["analyze"]);
