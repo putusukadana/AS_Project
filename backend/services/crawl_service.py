@@ -54,7 +54,11 @@ async def run_crawl(
         if tiktok_res["status"] == "success":
             for video in tiktok_res["results"]:
                 all_data.append(video)
-                
+
+    # Terapkan video_limit secara global setelah semua target
+    if video_limit > 0:
+        all_data = all_data[:video_limit]
+
     # Ensure signal quality logic
     signal_quality = 95 if all_data else 0
     if len(targets) > 1 and not all_data:

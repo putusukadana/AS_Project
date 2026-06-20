@@ -1,7 +1,7 @@
 import re
 import emoji
 import pandas as pd
-import os
+
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 from database import db
@@ -19,26 +19,6 @@ try:
 except Exception as e:
     print(f"Peringatan: Gagal memuat kamus alay dari URL. Error: {e}")
     slang_dict = {}
-
-# 2. InSet Sentiment Lexicon
-def load_kamus_sentimen(filepath):
-    try:
-        if not os.path.exists(filepath):
-            base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-            filepath = os.path.join(base_dir, filepath.replace("/", "\\"))
-            
-        df = pd.read_csv(filepath, sep='\t')
-        return dict(zip(df['word'].str.lower(), df['weight']))
-    except Exception as e:
-        print(f"Gagal memuat kamus sentimen: {filepath}. Error: {e}")
-        return {}
-
-base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-path_pos = os.path.join(base_dir, "resources", "InSet", "positive.tsv")
-path_neg = os.path.join(base_dir, "resources", "InSet", "negative.tsv")
-pos_kamus = load_kamus_sentimen(path_pos)
-neg_kamus = load_kamus_sentimen(path_neg)
-
 # 3. Sastrawi Stopword Remover
 factory = StopWordRemoverFactory()
 stopword_remover = factory.create_stop_word_remover()
@@ -73,20 +53,6 @@ def stem_text(teks: str) -> str:
         return ""
     return stemmer.stem(teks)
 
-def skor_sentimen(teks: str) -> float:
-    if not isinstance(teks, str):
-        return 0.0
-    skor = 0.0
-    for kata in teks.lower().split():
-        skor += pos_kamus.get(kata, 0)
-        skor += neg_kamus.get(kata, 0)
-    return skor
-
-def label_sentimen(skor: float) -> str:
-    if skor > 0: return 'Positif'
-    elif skor < 0: return 'Negatif'
-    else: return 'Netral'
-
 async def save_processed_data(data: List[ProcessedData]):
     if not data: return
     collection = db["processed_results"]
@@ -112,6 +78,15 @@ def set_current_data(data):
         print(f"Error initializing data: {e}")
         _current_data = []
 
+def _pipeline_meta():
+    total_videos = len(_current_data)
+    total_comments = sum(
+        len(v.get("comment_sample", []))
+        for v in _current_data
+        if "comment_sample" in v
+    )
+    return {"total_videos": total_videos, "total_comments": total_comments}
+
 async def run_emoji_conversion():
     try:
         for video in _current_data:
@@ -119,7 +94,7 @@ async def run_emoji_conversion():
                 for comment in video['comment_sample']:
                     if 'text' in comment:
                         comment['text'] = konversi_emoji(comment['text'])
-        return {"status": "done", "step": "emoji_conversion", "data": _current_data}
+        return {"status": "done", "step": "emoji_conversion", "data": _current_data, "meta": _pipeline_meta()}
     except Exception as e:
         return {"status": "error", "step": "emoji_conversion", "message": str(e)}
 
@@ -130,7 +105,7 @@ async def run_cleansing():
                 for comment in video['comment_sample']:
                     if 'text' in comment:
                         comment['text'] = clean_text(comment['text'])
-        return {"status": "done", "step": "cleansed", "data": _current_data}
+        return {"status": "done", "step": "cleansed", "data": _current_data, "meta": _pipeline_meta()}
     except Exception as e:
         return {"status": "error", "step": "cleansed", "message": str(e)}
 
@@ -141,7 +116,7 @@ async def run_normalization():
                 for comment in video['comment_sample']:
                     if 'text' in comment:
                         comment['text'] = normalisasi_slang(comment['text'])
-        return {"status": "done", "step": "normalized", "data": _current_data}
+        return {"status": "done", "step": "normalized", "data": _current_data, "meta": _pipeline_meta()}
     except Exception as e:
         return {"status": "error", "step": "normalized", "message": str(e)}
 
@@ -152,19 +127,26 @@ async def run_stopwords():
                 for comment in video['comment_sample']:
                     if 'text' in comment:
                         comment['text'] = stopword_remover.remove(comment['text'])
-        return {"status": "done", "step": "stopwords", "data": _current_data}
+        return {"status": "done", "step": "stopwords", "data": _current_data, "meta": _pipeline_meta()}
     except Exception as e:
         return {"status": "error", "step": "stopwords", "message": str(e)}
 
 async def run_stemming():
     try:
         processed_items = []
+        total_skipped = 0
         for video in _current_data:
             if 'comment_sample' in video:
-                for comment in video['comment_sample']:
+                for comment in video['comment_sample'][:]:
                     if 'text' in comment:
                         stemmed = stem_text(comment['text'])
                         comment['stemmed_text'] = stemmed
+                        
+                        # Skip jika stemmed kosong
+                        if not stemmed or stemmed.strip() == "":
+                            video["comment_sample"].remove(comment)
+                            total_skipped += 1
+                            continue
                         
                         processed_obj = ProcessedData(
                             raw_text=comment.get('raw_text') or comment.get('text') or "",
@@ -177,10 +159,13 @@ async def run_stemming():
                         )
                         processed_items.append(processed_obj)
         
+        meta = _pipeline_meta()
+        meta["total_filtered"] = total_skipped
+        
         if processed_items:
             await save_processed_data(processed_items)
                 
-        return {"status": "done", "step": "stemming", "data": _current_data}
+        return {"status": "done", "step": "stemming", "data": _current_data, "meta": meta}
     except Exception as e:
         print(f"Internal Stemming Error: {e}")
         return {"status": "error", "step": "stemming", "message": "Terjadi kesalahan pada sistem pemrosesan stemming."}

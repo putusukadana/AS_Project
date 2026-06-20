@@ -28,85 +28,56 @@
 </template>
 
 <script setup>
+import { computed } from 'vue';
 import { Bar } from 'vue-chartjs';
 import {
-  Chart as ChartJS,
-  Title,
-  Tooltip,
-  Legend,
-  BarElement,
-  CategoryScale,
-  LinearScale,
+  Chart as ChartJS, Title, Tooltip, Legend,
+  BarElement, CategoryScale, LinearScale,
 } from 'chart.js';
+import { useCrawlStore } from '@/stores/crawlStore';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
-const chartData = {
-  labels: ['TikTok', 'Instagram', 'Twitter', 'YouTube', 'Facebook'],
-  datasets: [
-    {
-      label: 'Positive',
-      backgroundColor: '#2563eb', // blue-600
-      data: [45, 52, 38, 65, 42],
-      borderRadius: 6,
-    },
-    {
-      label: 'Neutral',
-      backgroundColor: '#4b5563', // gray-600
-      data: [30, 25, 42, 20, 38],
-      borderRadius: 6,
-    },
-    {
-      label: 'Negative',
-      backgroundColor: '#dc2626', // red-600
-      data: [25, 23, 20, 15, 20],
-      borderRadius: 6,
-    },
-  ],
-};
+const crawlStore = useCrawlStore();
+
+const chartData = computed(() => {
+  const summary = crawlStore.sentimentSummary;
+
+  if (!summary || summary.total_comments === 0) {
+    return {
+      labels: ['Belum Ada Data'],
+      datasets: [
+        { label: 'Positif',  backgroundColor: '#2563eb', data: [0], borderRadius: 6 },
+        { label: 'Netral',   backgroundColor: '#4b5563', data: [0], borderRadius: 6 },
+        { label: 'Negatif',  backgroundColor: '#dc2626', data: [0], borderRadius: 6 },
+      ],
+    };
+  }
+
+  return {
+    labels: ['TikTok'],
+    datasets: [
+      { label: 'Positif',  backgroundColor: '#2563eb', data: [summary.positif],  borderRadius: 6 },
+      { label: 'Netral',   backgroundColor: '#4b5563', data: [summary.netral],   borderRadius: 6 },
+      { label: 'Negatif',  backgroundColor: '#dc2626', data: [summary.negatif],  borderRadius: 6 },
+    ],
+  };
+});
 
 const chartOptions = {
   responsive: true,
   maintainAspectRatio: false,
   plugins: {
-    legend: {
-      display: false,
-    },
+    legend: { display: false },
     tooltip: {
-      backgroundColor: '#1e293b',
-      padding: 12,
+      backgroundColor: '#1e293b', padding: 12,
       titleFont: { size: 14, weight: 'bold' },
-      bodyFont: { size: 13 },
-      cornerRadius: 12,
+      bodyFont: { size: 13 }, cornerRadius: 12,
     },
   },
   scales: {
-    x: {
-      stacked: true,
-      grid: {
-        display: false,
-      },
-      ticks: {
-        font: {
-          weight: 'bold',
-          size: 11,
-        },
-        color: '#94a3b8',
-      },
-    },
-    y: {
-      stacked: true,
-      grid: {
-        color: '#f1f5f9',
-      },
-      ticks: {
-        font: {
-          weight: 'bold',
-          size: 11,
-        },
-        color: '#94a3b8',
-      },
-    },
+    x: { stacked: true, grid: { display: false }, ticks: { font: { weight: 'bold', size: 11 }, color: '#94a3b8' } },
+    y: { stacked: true, grid: { color: '#f1f5f9' }, ticks: { font: { weight: 'bold', size: 11 }, color: '#94a3b8' } },
   },
 };
 </script>

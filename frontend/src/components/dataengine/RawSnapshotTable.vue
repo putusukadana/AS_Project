@@ -35,10 +35,11 @@
                   'bg-black text-white border-black': summary.platform?.toLowerCase() === 'tiktok',
                   'bg-pink-50 text-pink-600 border-pink-100': summary.platform?.toLowerCase() === 'instagram',
                   'bg-red-50 text-red-600 border-red-100': summary.platform?.toLowerCase() === 'youtube',
-                  'bg-blue-50 text-blue-600 border-blue-100': summary.platform?.toLowerCase() === 'news'
+                  'bg-blue-50 text-blue-600 border-blue-100': summary.platform?.toLowerCase() === 'news',
+                  'bg-green-50 text-green-600 border-green-100': summary.platform?.toLowerCase() === 'upload'
                 }"
               >
-                {{ summary.platform }}
+                {{ summary.platform === 'upload' ? '📁 Upload' : summary.platform }}
               </span>
             </td>
             <td class="py-4 text-center">

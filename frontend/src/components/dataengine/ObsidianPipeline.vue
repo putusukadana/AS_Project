@@ -74,6 +74,9 @@
           <span class="text-sm font-bold tracking-tight transition-colors duration-300" :class="step.status === 'idle' ? 'text-slate-400' : 'text-slate-800'">
             {{ step.label }}
           </span>
+          <span v-if="pipelineMeta[step.id]" class="text-[10px] font-bold text-slate-400 mt-0.5">
+            {{ pipelineMeta[step.id].total_comments }} komentar dari {{ pipelineMeta[step.id].total_videos }} video
+          </span>
           <div class="flex items-center gap-2 mt-0.5">
             <span 
               class="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md"
@@ -139,7 +142,8 @@ import { computed } from "vue";
 
 const props = defineProps({
   steps: { type: Array, required: true },
-  isAnalyzing: { type: Boolean, default: false }
+  isAnalyzing: { type: Boolean, default: false },
+  pipelineMeta: { type: Object, default: () => ({}) }
 });
 
 defineEmits(["analyze"]);
