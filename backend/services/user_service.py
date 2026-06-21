@@ -56,7 +56,7 @@ async def login_user(users_collection: AsyncIOMotorCollection, user_credentials:
         )
     
     # Generate Access Token
-    access_token = create_access_token(data={"sub": user["email"]})
+    access_token = create_access_token(data={"sub": user["email"], "user_id": str(user["_id"])})
     
     logger.info(f"User Logged In: {user['email']}")
     return APIResponse(

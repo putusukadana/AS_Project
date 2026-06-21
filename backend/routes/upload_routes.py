@@ -1,4 +1,5 @@
-from fastapi import APIRouter, UploadFile, File
+from fastapi import APIRouter, UploadFile, File, Depends
+from auth import get_current_user
 from services.upload_service import parse_uploaded_file
 from services.pipeline_service import set_current_data
 
@@ -8,7 +9,7 @@ MAX_FILE_SIZE = 10 * 1024 * 1024
 
 
 @router.post("/file")
-async def upload_file(file: UploadFile = File(...)):
+async def upload_file(file: UploadFile = File(...), user = Depends(get_current_user)):
     allowed_extensions = ["csv", "json", "xlsx", "xls"]
     filename = file.filename or "unknown"
     ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""

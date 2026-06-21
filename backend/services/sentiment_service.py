@@ -1,6 +1,17 @@
 import os
-import torch
-from transformers import DistilBertTokenizer, DistilBertForSequenceClassification
+import warnings
+
+try:
+    import torch
+    from transformers import DistilBertTokenizer, DistilBertForSequenceClassification
+    _TORCH_AVAILABLE = True
+except ImportError:
+    torch = None
+    DistilBertTokenizer = None
+    DistilBertForSequenceClassification = None
+    _TORCH_AVAILABLE = False
+    warnings.warn("torch/transformers not installed. Sentiment analysis will be unavailable.")
+
 from database import db
 
 # =====================================================================
@@ -18,11 +29,16 @@ LABEL_MAP = {
 # =====================================================================
 # INISIALISASI MODEL (hanya dilakukan sekali saat server pertama jalan)
 # =====================================================================
-print(f"[Sentiment] Memuat model dari {MODEL_DIR}...")
-tokenizer = DistilBertTokenizer.from_pretrained(MODEL_DIR)
-model = DistilBertForSequenceClassification.from_pretrained(MODEL_DIR)
-model.eval()  # Set ke mode evaluasi (tidak ada gradient update)
-print("[Sentiment] Model berhasil dimuat.")
+tokenizer = None
+model = None
+if _TORCH_AVAILABLE:
+    print(f"[Sentiment] Memuat model dari {MODEL_DIR}...")
+    tokenizer = DistilBertTokenizer.from_pretrained(MODEL_DIR)
+    model = DistilBertForSequenceClassification.from_pretrained(MODEL_DIR)
+    model.eval()  # Set ke mode evaluasi (tidak ada gradient update)
+    print("[Sentiment] Model berhasil dimuat.")
+else:
+    print("[Sentiment] torch/transformers tidak tersedia. Skipping model load.")
 
 
 # =====================================================================
@@ -30,19 +46,9 @@ print("[Sentiment] Model berhasil dimuat.")
 # =====================================================================
 
 def predict_sentiment(text: str) -> dict:
-    """
-    Melakukan prediksi sentimen untuk satu teks.
+    if not _TORCH_AVAILABLE or model is None:
+        return {"label": "Netral", "score": 0.0, "label_index": 1, "error": "Model not loaded"}
 
-    Args:
-        text (str): Teks yang sudah di-preprocess (stemmed_text)
-
-    Returns:
-        dict: {
-            "label": "Positif" | "Netral" | "Negatif",
-            "score": float (confidence 0.0 - 1.0),
-            "label_index": int (0, 1, atau 2)
-        }
-    """
     if not text or not isinstance(text, str) or text.strip() == "":
         return {"label": "Netral", "score": 0.0, "label_index": 1}
 
@@ -78,6 +84,14 @@ async def run_sentiment_analysis() -> dict:
 
     Mengembalikan hasil analisis lengkap beserta ringkasan statistik.
     """
+    if not _TORCH_AVAILABLE or model is None:
+        return {
+            "status": "error",
+            "message": "Sentiment analysis tidak tersedia. torch/transformers tidak terinstall.",
+            "data": [],
+            "summary": {}
+        }
+
     from services.pipeline_service import _current_data  # Import di sini agar selalu ambil versi terbaru
 
     if not _current_data:

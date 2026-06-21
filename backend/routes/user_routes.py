@@ -3,7 +3,8 @@ from motor.motor_asyncio import AsyncIOMotorCollection
 
 from database import get_database
 from models import UserRegistration, UserLogin, APIResponse
-from services.user_service import register_user, login_user
+from services.user_service import register_user, login_user, format_user_response
+from auth import get_current_user
 
 router = APIRouter(prefix="/api/v1/users", tags=["users"])
 
@@ -18,3 +19,10 @@ async def login(user_credentials: UserLogin):
     db = get_database()
     users_collection: AsyncIOMotorCollection = db["users"]
     return await login_user(users_collection, user_credentials)
+
+@router.get("/me")
+async def get_me(user = Depends(get_current_user)):
+    return APIResponse(
+        message="User fetched successfully",
+        data=format_user_response(user)
+    )

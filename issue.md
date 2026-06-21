@@ -1,151 +1,125 @@
-# Issue: Ganti `get_comments()` ke TikTok Web API
+# Issue: Perbaikan JWT Authentication
 
-## Latar Belakang
+## Status: ✅ SELESAI (2026-06-21)
 
-Fungsi crawling komentar TikTok saat ini menggunakan **RapidAPI** (`tiktok-api23.p.rapidapi.com/api/post/comments`).  
-RapidAPI key yang dipakai sudah **403 Forbidden** (expired/tidak valid), sehingga tidak ada komentar yang berhasil diambil.
+| # | Item | Status |
+|---|------|--------|
+| 1 | `get_current_user()` di `auth.py` | ✅ |
+| 2 | `user_id` di payload JWT (`user_service.py`) | ✅ |
+| 3 | `GET /me` di `user_routes.py` | ✅ |
+| 4 | `Depends(get_current_user)` di `crawl_routes.py` | ✅ |
+| 5 | `Depends(get_current_user)` di `pipeline_routes.py` | ✅ |
+| 6 | `Depends(get_current_user)` di `analysis_routes.py` | ✅ |
+| 7 | `Depends(get_current_user)` di `upload_routes.py` | ✅ |
+| 8 | `Depends(get_current_user)` di `settings_routes.py` | ✅ |
 
-## Solusi
+## Masalah
 
-Ganti method `get_comments()` di class `TikTokCommentScraper` untuk mengakses **TikTok Web API** langsung:
+Backend tidak pernah memverifikasi JWT token. Semua endpoint (`/crawl`, `/pipeline`, `/analysis`, `/upload`, `/settings`) dapat diakses tanpa login.
+
+### Flow Setelah Fix
+
 ```
-GET https://www.tiktok.com/api/comment/list/?aid=1988&aweme_id={video_id}&count=50&cursor={cursor}
+[Login] → POST /api/v1/users/login → JWT dibuat → disimpan di localStorage
+         ↓
+[API Call] → Axios interceptor → Header: Bearer {token}
+         ↓
+[Backend]  → ✅ verifikasi token via get_current_user()
+              ↓ valid
+         ✅ lanjut ke handler
+              ↓ invalid / expired / no token
+         ❌ HTTP 401 Unauthorized
 ```
 
-**Keuntungan:**
-- Gratis, tanpa quota
-- Tidak perlu API key
-- Tidak perlu cookie (cukup User-Agent browser)
+### Daftar Issue
 
-## File yang Diubah
+| # | Issue | Severity |
+|---|-------|----------|
+| 1 | Backend tidak pernah verifikasi JWT | 🔴 Critical |
+| 2 | Tidak ada refresh token (expire 30 menit) | 🟡 Medium |
+| 3 | Tidak ada endpoint `/users/me` | 🟡 Medium |
+| 4 | SECRET_KEY fallback hardcoded di source code | 🟡 Medium |
+| 5 | Payload JWT minim (hanya `sub: email`) | 🟢 Low |
 
-Hanya **satu file**:
+---
+
+## Implementasi Selesai
+
+### 1. `backend/auth.py` — Ditambahkan `get_current_user` dependency
+
+```python
+from fastapi import Depends, HTTPException, status
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from jose import JWTError, jwt
+from database import db
+
+security = HTTPBearer()
+
+async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    token = credentials.credentials
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        email = payload.get("sub")
+        if email is None:
+            raise HTTPException(status_code=401, detail="Invalid token")
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+    
+    user = await db["users"].find_one({"email": email})
+    if user is None:
+        raise HTTPException(status_code=401, detail="User not found")
+    return user
+```
+
+### 2. Ditambahkan `user_id` di payload JWT (`user_service.py`)
+
+Payload berubah dari `{"sub": email}` menjadi `{"sub": email, "user_id": "..."}`.
+
+### 3. Semua route — Ditambahkan `Depends(get_current_user)`
+
+| File | Endpoint | Perubahan |
+|------|----------|-----------|
+| `backend/routes/crawl_routes.py` | `POST /start`, `GET /quota` | + parameter `user = Depends(get_current_user)` |
+| `backend/routes/pipeline_routes.py` | Setiap step | + parameter `user = Depends(get_current_user)` |
+| `backend/routes/analysis_routes.py` | `POST /sentiment`, `POST /keywords` | + parameter `user = Depends(get_current_user)` |
+| `backend/routes/upload_routes.py` | `POST /file` | + parameter `user = Depends(get_current_user)` |
+| `backend/routes/settings_routes.py` | `GET/PUT /rapidapi-key` | + parameter `user = Depends(get_current_user)` |
+
+Semua endpoint sekarang memiliki parameter `user = Depends(get_current_user)`.
+
+### 4. `backend/routes/user_routes.py` — Ditambahkan `GET /me`
+
+```python
+@router.get("/me")
+async def get_me(user = Depends(get_current_user)):
+    return APIResponse(
+        message="User fetched successfully",
+        data=format_user_response(user)
+    )
+```
+
+### 5. File yang diubah (✅ semua selesai)
 
 | File | Perubahan |
 |------|-----------|
-| `backend/services/crawl_tiktok_service.py` | class `TikTokCommentScraper` — ganti method `get_comments()` dan `__init__()` |
+| `backend/auth.py` | Tambah import + `get_current_user()` + `security` + `user_id` di payload |
+| `backend/services/user_service.py` | Tambah `user_id` di argumen `create_access_token()` |
+| `backend/routes/crawl_routes.py` | Tambah `Depends(get_current_user)` di setiap endpoint |
+| `backend/routes/pipeline_routes.py` | Sama |
+| `backend/routes/analysis_routes.py` | Sama |
+| `backend/routes/upload_routes.py` | Sama |
+| `backend/routes/settings_routes.py` | Sama |
+| `backend/routes/user_routes.py` | Tambah `GET /me` |
 
-## Tidak Berubah
+### Testing
 
-- `extract_tiktok_data()` — tetap pakai RapidAPI untuk search video (jika key sudah valid)
-- `get_tiktok_video_details()` — tetap pakai RapidAPI untuk detail video
-- `crawl_service.py`
-- Pipeline, routes, frontend
+1. Panggil endpoint **tanpa header Authorization** → harus return **401**
+2. Panggil dengan **token invalid/expired** → harus return **401**
+3. Panggil dengan **token valid** → sukses ✅
+4. `GET /api/v1/users/me` → return data user ✅
 
-## Detail Implementasi
+### Catatan
 
-### Method `__init__()`
-
-```python
-def __init__(self):
-    self.session = requests.Session()
-    self.session.headers.update({
-        'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'referer': 'https://www.tiktok.com/',
-    })
-```
-
-### Method `get_comments()`
-
-```python
-def get_comments(self, video_id, max_comments=None):
-    comments = []
-    cursor = 0
-    has_more = True
-
-    while has_more:
-        if max_comments and len(comments) >= max_comments:
-            break
-
-        try:
-            url = (
-                f"https://www.tiktok.com/api/comment/list/"
-                f"?aid=1988&aweme_id={video_id}&count=50&cursor={cursor}"
-            )
-            self.session.headers.update({
-                'referer': f'https://www.tiktok.com/@x/video/{video_id}'
-            })
-
-            resp = self.session.get(url, timeout=15)
-            if resp.status_code != 200:
-                print(f"[TikTok Web] Gagal: {resp.status_code}")
-                break
-
-            data = resp.json()
-            raw_comments = data.get("comments")
-            if not raw_comments or not isinstance(raw_comments, list):
-                break
-
-            for item in raw_comments:
-                user = item.get("user", {})
-                comments.append({
-                    "cid": item.get("cid", ""),
-                    "text": item.get("text", ""),
-                    "user_nickname": user.get("nickname", "TikTok User"),
-                    "user_unique_id": user.get("unique_id", ""),
-                    "digg_count": item.get("digg_count", 0),
-                    "replies": [],
-                })
-
-            has_more = data.get("has_more", False)
-            cursor = data.get("cursor", cursor)
-            time.sleep(2.5)
-
-        except Exception as e:
-            print(f"[TikTok Web] Error get_comments {video_id}: {e}")
-            break
-
-    return comments
-```
-
-### Perbedaan dengan kode lama (RapidAPI)
-
-| Aspek | Sebelum (RapidAPI) | Sesudah (TikTok Web) |
-|-------|-------------------|---------------------|
-| Endpoint | `tiktok-api23.p.rapidapi.com/api/post/comments` | `www.tiktok.com/api/comment/list/` |
-| Auth | API key + Host header | User-Agent browser |
-| Biaya | Berbayar (quota 100/jam) | Gratis |
-| Rate limit | 1 req/4 detik | 1 req/2.5 detik |
-| Return format | `list[dict]` | `list[dict]` (sama) |
-| Parameter | `videoId`, `count: "20"`, `cursor` | `aweme_id`, `count: 50`, `cursor` |
-
-### Response format TikTok Web API
-
-```json
-{
-  "comments": [
-    {
-      "cid": "12345",
-      "text": "Komentar...",
-      "user": {
-        "nickname": "User1",
-        "unique_id": "user1"
-      },
-      "digg_count": 5,
-      "create_time": 1234567890
-    }
-  ],
-  "has_more": true,
-  "cursor": "50"
-}
-```
-
-## Cara Test
-
-Jalankan script berikut dari `backend/` directory:
-
-```python
-from services.crawl_tiktok_service import TikTokCommentScraper
-
-scraper = TikTokCommentScraper()
-comments = scraper.get_comments("VIDEO_ID_AND", max_comments=100)
-print(f"Mendapat {len(comments)} komentar")
-if comments:
-    print(comments[0])
-```
-
-## Catatan
-
-1. **TikTok Web API bisa berubah kapan saja** — TikTok tidak menyediakan dokumentasi resmi untuk endpoint ini
-2. **Rate limiting TikTok** — jika terlalu cepat, TikTok bisa return 403 atau empty response. Delay 2.5 detik sudah cukup aman
-3. **Fungsi search & detail video masih via RapidAPI** — jika RapidAPI masih 403, pencarian video tetap tidak akan berfungsi, hanya ambil komentar yang berubah
+- Token tetap expire 30 menit. Refresh token bisa ditambahkan di iterasi berikutnya.
+- SECRET_KEY tetap di `.env`. Fallback hardcode akan tetap ada untuk development, tapi endpoint tetap terproteksi.
+- `get_current_user` tidak dipakai untuk authorization logic (siapa boleh akses apa) — hanya untuk **authentication** (siapa yang mengakses).

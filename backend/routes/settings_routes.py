@@ -1,6 +1,7 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from database import db
+from auth import get_current_user
 
 router = APIRouter(prefix="/api/v1/settings", tags=["settings"])
 
@@ -8,7 +9,7 @@ class RapidAPIKeyRequest(BaseModel):
     value: str
 
 @router.get("/rapidapi-key")
-async def get_rapidapi_key():
+async def get_rapidapi_key(user = Depends(get_current_user)):
     collection = db["settings"]
     doc = await collection.find_one({"key": "rapidapi_key"})
     return {
@@ -19,7 +20,7 @@ async def get_rapidapi_key():
     }
 
 @router.put("/rapidapi-key")
-async def set_rapidapi_key(body: RapidAPIKeyRequest):
+async def set_rapidapi_key(body: RapidAPIKeyRequest, user = Depends(get_current_user)):
     collection = db["settings"]
     await collection.update_one(
         {"key": "rapidapi_key"},
