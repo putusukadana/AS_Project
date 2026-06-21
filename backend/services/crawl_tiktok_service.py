@@ -5,13 +5,19 @@ import re
 import os
 from typing import List, Dict, Any, Optional, Union
 from dotenv import load_dotenv
+from database import db
 
 load_dotenv()
 
 # --- Configuration & Global Rate Limiting ---
-RAPIDAPI_KEY = os.getenv("RAPIDAPI_KEY", "5a4e413e53msh489dc431409691cp1d2ffbjsn439845531010")
 RAPIDAPI_HOST = "tiktok-api23.p.rapidapi.com"
 
+async def _get_rapidapi_key():
+    collection = db["settings"]
+    doc = await collection.find_one({"key": "rapidapi_key"})
+    if doc and doc.get("value"):
+        return doc["value"]
+    return os.getenv("RAPIDAPI_KEY", "5a4e413e53msh489dc431409691cp1d2ffbjsn439845531010")
 # Track last request to ensure 1 request/second (approx 1.1s safety)
 _last_request_time = 0
 _last_quota = {"remaining": 100, "limit": 100} # Initial estimate based on last test
@@ -74,7 +80,7 @@ def safe_api_request(url, headers, params=None, timeout=15, max_retries=1):
 
 # --- TikTok Video Extraction ---
 
-def extract_tiktok_data(
+async def extract_tiktok_data(
     keywords: Union[str, List[str]],
     cursor: str = "0",
     limit: int = 0,
@@ -85,9 +91,10 @@ def extract_tiktok_data(
     if not keywords:
         return {"status": "error", "message": "Harus memasukkan keyword"}
 
+    rapidapi_key = await _get_rapidapi_key()
     url = "https://tiktok-api23.p.rapidapi.com/api/search/video"
     headers = {
-        "x-rapidapi-key": RAPIDAPI_KEY,
+        "x-rapidapi-key": rapidapi_key,
         "x-rapidapi-host": RAPIDAPI_HOST
     }
 

@@ -123,15 +123,21 @@
     <!-- Tombol Analisis -->
     <button
       v-if="allDone"
-      class="group w-full p-4 bg-gradient-to-r from-indigo-600 to-violet-700 text-white rounded-2xl font-black mt-10 shadow-2xl shadow-indigo-200 hover:shadow-indigo-300 hover:-translate-y-1 active:translate-y-0 transition-all duration-300 relative overflow-hidden"
+      class="group w-full p-4 rounded-2xl font-black mt-10 shadow-2xl transition-all duration-300 relative overflow-hidden"
+      :class="isAnalyzing ? 'bg-indigo-400 cursor-wait shadow-indigo-100' : 'bg-gradient-to-r from-indigo-600 to-violet-700 shadow-indigo-200 hover:shadow-indigo-300 hover:-translate-y-1 active:translate-y-0'"
       :disabled="isAnalyzing"
       @click="$emit('analyze')"
     >
-      <div class="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]"></div>
+      <div v-if="!isAnalyzing" class="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]"></div>
       <div class="flex items-center justify-center gap-3 relative z-10">
-        <span v-if="isAnalyzing" class="animate-spin text-xl">🧠</span>
-        <span v-else class="group-hover:rotate-12 transition-transform">🧠</span>
-        <span class="tracking-wide">ANALISIS SEKARANG</span>
+        <template v-if="isAnalyzing">
+          <span class="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+          <span class="tracking-wide text-white/80">MENGANALISIS...</span>
+        </template>
+        <template v-else>
+          <span class="group-hover:rotate-12 transition-transform">🧠</span>
+          <span class="tracking-wide text-white/80">ANALISIS SEKARANG</span>
+        </template>
       </div>
     </button>
   </div>

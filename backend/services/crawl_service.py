@@ -41,7 +41,7 @@ async def run_crawl(
             # If dates are provided, we should sort by date to allow early termination
             sort_by = "date" if (start_date or end_date) else "relevance"
             
-            tiktok_res = extract_tiktok_data(
+            tiktok_res = await extract_tiktok_data(
                 keywords=item, 
                 limit=video_limit, 
                 sort_by=sort_by,

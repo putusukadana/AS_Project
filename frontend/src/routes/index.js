@@ -18,6 +18,12 @@ const routes = [
     component: () => import('@/views/DataEngine.vue'),
     meta: { requiresAuth: true }
   },
+  {
+    path: '/profile',
+    name: 'Settings',
+    component: () => import('@/views/Settings.vue'),
+    meta: { requiresAuth: true }
+  },
   ...authRoutes
 ]
 

@@ -37,11 +37,13 @@ from routes.crawl_routes import router as crawl_router
 from routes.pipeline_routes import router as pipeline_router
 from routes.analysis_routes import router as analysis_router
 from routes.upload_routes import router as upload_router
+from routes.settings_routes import router as settings_router
 
 app.include_router(crawl_router)
 app.include_router(pipeline_router)
 app.include_router(analysis_router)
 app.include_router(upload_router)
+app.include_router(settings_router)
 
 if __name__ == "__main__":
     import uvicorn
