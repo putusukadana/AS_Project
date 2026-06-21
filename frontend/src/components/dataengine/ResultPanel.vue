@@ -1,6 +1,5 @@
 <template>
   <div class="flex flex-col gap-6 w-full">
-    <RawStats :totalData="stats.total" :signalQuality="stats.quality" />
     <RawSnapshotTable :rows="rawData" />
     <DataSummary />
     <ObsidianPipeline :steps="pipelineSteps" :is-analyzing="isAnalyzing" @analyze="runAnalysis" @retry="handleRetry" />
@@ -10,7 +9,6 @@
 <script setup>
 import { computed } from "vue";
 import { useRouter } from "vue-router";
-import RawStats from "./RawStats.vue";
 import RawSnapshotTable from "./RawSnapshotTable.vue";
 import ObsidianPipeline from "./ObsidianPipeline.vue";
 import DataSummary from "./DataSummary.vue";
@@ -19,7 +17,6 @@ import { useCrawlStore } from "@/stores/crawlStore";
 const crawlStore = useCrawlStore();
 const router = useRouter();
 
-const stats = computed(() => crawlStore.stats);
 const rawData = computed(() => crawlStore.rawData);
 const isAnalyzing = computed(() => crawlStore.isAnalyzing);
 

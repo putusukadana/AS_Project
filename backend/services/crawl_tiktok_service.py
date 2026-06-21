@@ -9,13 +9,12 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # --- Configuration & Global Rate Limiting ---
-RAPIDAPI_KEY = os.getenv("RAPIDAPI_KEY", "e0efe95aefmsh313499f65d0af00p165956jsn75b9820f7c78")
-# RAPIDAPI_KEY = os.getenv("RAPIDAPI_KEY", "d501fae7bfmsh3f1de8ef5dc24d3p1d9ebejsnabaf8a976a3e")
+RAPIDAPI_KEY = os.getenv("RAPIDAPI_KEY", "5a4e413e53msh489dc431409691cp1d2ffbjsn439845531010")
 RAPIDAPI_HOST = "tiktok-api23.p.rapidapi.com"
 
 # Track last request to ensure 1 request/second (approx 1.1s safety)
 _last_request_time = 0
-_last_quota = {"remaining": 93, "limit": 100} # Initial estimate based on last test
+_last_quota = {"remaining": 100, "limit": 100} # Initial estimate based on last test
 
 def get_last_quota():
     global _last_quota
@@ -30,7 +29,7 @@ def respect_rate_limit():
 
 # --- Utility: Safe API Request with Retry & Backoff ---
 
-def safe_api_request(url, headers, params=None, timeout=15, max_retries=3):
+def safe_api_request(url, headers, params=None, timeout=15, max_retries=1):
     """Wrapper untuk requests.get dengan penanganan error 429 (Rate Limit)."""
     retry_delay = 5 # Detik awal tunggu
     
@@ -217,166 +216,84 @@ def resolve_and_extract_video_id(url: str) -> Optional[str]:
         return None
 
 def get_tiktok_video_details(video_id: str) -> Dict[str, Any]:
-    """Mengambil metadata video TikTok berdasarkan ID."""
-    url = "https://tiktok-api23.p.rapidapi.com/api/post/info"
-    headers = {
-        "x-rapidapi-key": RAPIDAPI_KEY,
-        "x-rapidapi-host": RAPIDAPI_HOST
-    }
-    querystring = {"videoId": video_id}
-    
+    """Mengambil komentar TikTok berdasarkan video_id (gratis, tanpa RapidAPI)."""
     try:
-        response = safe_api_request(url, headers=headers, params=querystring)
-        if not response or response.status_code != 200:
-            return {"status": "error", "results": []}
-            
-        data = response.json()
-        
-        # Mapping response ke format yang seragam
-        item = data.get("base") or data.get("itemInfo", {}).get("itemStruct", {})
-        if not item:
-            item = data
-            
-        author = item.get("author") or {}
-        author_unique_id = author.get("uniqueId") or author.get("unique_id", "")
-        
-        video_id_actual = item.get("id") or video_id
-        
-        # Ambil sample komentar untuk video tunggal ini
         comment_scraper = TikTokCommentScraper()
-        comment_sample = []
-        try:
-            comment_sample = comment_scraper.get_comments(video_id_actual, max_comments=None)
-        except:
-            pass
+        comment_sample = comment_scraper.get_comments(video_id, max_comments=None)
 
         return {
             "status": "success",
             "results": [{
                 "platform": "tiktok",
-                "post_url": f"https://www.tiktok.com/@{author_unique_id}/video/{video_id_actual}",
-                "video_id": video_id_actual,
-                "author_unique_id": author_unique_id,
-                "comment_count": int(item.get("stats", {}).get("commentCount") or 0),
+                "nickname": "TikTok User",
+                "post_url": f"https://www.tiktok.com/video/{video_id}",
+                "video_id": video_id,
+                "author_unique_id": "",
+                "comment_count": len(comment_sample),
+                "estimated_size_kb": round(len(comment_sample) * 0.15, 2),
                 "comment_sample": comment_sample
             }]
         }
     except Exception as e:
-        print(f"Error fetching video details: {e}")
+        print(f"[TikTok Web] Error get_tiktok_video_details: {e}")
         return {"status": "error", "results": []}
 
 class TikTokCommentScraper:
     def __init__(self):
         self.session = requests.Session()
-        self.headers = {
+        self.session.headers.update({
             'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
             'referer': 'https://www.tiktok.com/',
-        }
-        self.session.headers.update(self.headers)
+        })
 
     def get_comments(self, video_id, max_comments=None):
         comments = []
         cursor = 0
         has_more = True
-        url = "https://tiktok-api23.p.rapidapi.com/api/post/comments"
-        headers = {
-            "x-rapidapi-key": RAPIDAPI_KEY,
-            "x-rapidapi-host": RAPIDAPI_HOST
-        }
-        
+
         while has_more:
             if max_comments and len(comments) >= max_comments:
                 break
+
             try:
-                params = {"videoId": video_id, "count": "20", "cursor": str(cursor)}
-                response = safe_api_request(url, headers=headers, params=params, timeout=15)
-                
-                # Jika API mengembalikan error (termasuk 429 quota habis), hentikan gracefully
-                if not response or response.status_code != 200:
-                    if response and response.status_code == 429:
-                        print(f"[Komentar] Kuota API habis saat mengambil komentar video {video_id}. Menghentikan pengambilan komentar.")
+                url = (
+                    f"https://www.tiktok.com/api/comment/list/"
+                    f"?aid=1988&aweme_id={video_id}&count=50&cursor={cursor}"
+                )
+                self.session.headers.update({
+                    'referer': f'https://www.tiktok.com/@x/video/{video_id}'
+                })
+
+                resp = self.session.get(url, timeout=15)
+                if resp.status_code != 200:
+                    print(f"[TikTok Web] Gagal mengambil komentar: {resp.status_code}")
                     break
-                    
-                # Cek sisa kuota dari header, jika 0 maka berhenti setelah proses response ini
-                remaining = response.headers.get('x-ratelimit-requests-remaining')
-                quota_exhausted = False
-                if remaining is not None:
-                    try:
-                        if int(remaining) <= 0:
-                            quota_exhausted = True
-                    except:
-                        pass
-                
-                res_data = response.json()
-                
-                # Cek beberapa kemungkinan key hasil (tergantung versi API)
-                data_list = res_data.get("data") or res_data.get("comments")
-                if not data_list or not isinstance(data_list, list):
+
+                data = resp.json()
+                raw_comments = data.get("comments")
+                if not raw_comments or not isinstance(raw_comments, list):
                     break
-                
-                for item in data_list:
-                    # Mapping response ke format aplikasi
-                    user = item.get('user', {})
+
+                for item in raw_comments:
+                    user = item.get("user", {})
                     comments.append({
-                        'cid': item.get('cid') or item.get('id'),
-                        'text': item.get('text') or item.get('comment_text') or item.get('desc'),
-                        'user_nickname': user.get('nickname', 'Tiktok User'),
-                        'user_unique_id': user.get('unique_id') or user.get('uniqueId'),
-                        'digg_count': item.get('digg_count', 0),
-                        'replies': [] # Skip recursive replies for summary preview
+                        "cid": item.get("cid", ""),
+                        "text": item.get("text", ""),
+                        "user_nickname": user.get("nickname", "TikTok User"),
+                        "user_unique_id": user.get("unique_id", ""),
+                        "digg_count": item.get("digg_count", 0),
+                        "replies": [],
                     })
-                
-                has_more = res_data.get("hasMore", False) or res_data.get("has_more", False)
-                next_cursor = res_data.get("cursor")
-                if next_cursor is not None and str(next_cursor) != str(cursor):
-                    cursor = next_cursor
-                else:
-                    has_more = False
-                # Jika kuota sudah habis, hentikan loop setelah memproses response terakhir
-                if quota_exhausted:
-                    print(f"[Komentar] Kuota API telah habis. Menyelesaikan crawling dengan {len(comments)} komentar yang sudah didapat.")
-                    break
-                # Delay 1 RPS ditangani oleh safe_api_request
+
+                has_more = data.get("has_more", False)
+                cursor = data.get("cursor", cursor)
+
+                if has_more:
+                    time.sleep(2.5)
+
             except Exception as e:
-                print(f"Error fetching comments for {video_id}: {e}")
+                print(f"[TikTok Web] Error get_comments {video_id}: {e}")
                 break
+
         return comments
 
-    def get_replies(self, video_id, comment_id):
-        replies = []
-        cursor = 0
-        has_more = True
-        url = "https://tiktok-api23.p.rapidapi.com/api/post/comment/replies"
-        headers = {
-            "x-rapidapi-key": RAPIDAPI_KEY,
-            "x-rapidapi-host": RAPIDAPI_HOST
-        }
-        
-        while has_more:
-            params = {"videoId": video_id, "commentId": comment_id, "count": "50", "cursor": str(cursor)}
-            try:
-                res = safe_api_request(url, headers=headers, params=params, timeout=15)
-                if not res or res.status_code != 200:
-                    break
-                res_data = res.json()
-                
-                data_list = res_data.get("data") or res_data.get("comments") or res_data.get("replies")
-                if not data_list or not isinstance(data_list, list):
-                    break
-                    
-                replies.extend(data_list)
-                
-                has_more = res_data.get("hasMore", False) or res_data.get("has_more", False)
-                next_cursor = res_data.get("cursor")
-                if next_cursor is not None and str(next_cursor) != str(cursor):
-                    cursor = next_cursor
-                else:
-                    has_more = False
-                
-                if has_more:
-                    time.sleep(0.5)
-            except Exception as e:
-                print(f"Error fetching replies for {comment_id}: {e}")
-                break
-                
-        return replies

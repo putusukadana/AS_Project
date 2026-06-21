@@ -69,6 +69,13 @@ export const useCrawlStore = defineStore("crawl", () => {
       rawData.value = res.data.data;
       stats.value = { total: res.data.total, quality: res.data.signal_quality };
       pipelineMeta.value = {};
+      pipelineStatus.value = {
+        emoji_conversion: "idle",
+        cleansing: "idle",
+        normalization: "idle",
+        stopwords: "idle",
+        stemming: "idle",
+      };
       keywords.value = { overall: [], by_label: {} };
       onStatus({
         type: "success",
