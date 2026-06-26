@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from auth import get_current_user
 from services.pipeline_service import (
     run_emoji_conversion, 
@@ -11,12 +11,12 @@ from services.pipeline_service import (
 router = APIRouter(prefix="/api/v1/pipeline", tags=["pipeline"])
 
 @router.post("/emoji_conversion")
-async def emoji_conversion(user = Depends(get_current_user)):
-    return await run_emoji_conversion()
+async def emoji_conversion(convert_emoji: bool = Query(True), user = Depends(get_current_user)):
+    return await run_emoji_conversion(convert_emoji=convert_emoji)
 
 @router.post("/cleansing")
-async def cleansing(user = Depends(get_current_user)):
-    return await run_cleansing()
+async def cleansing(filter_lang: bool = Query(True), user = Depends(get_current_user)):
+    return await run_cleansing(filter_lang=filter_lang)
 
 @router.post("/normalization")
 async def normalization(user = Depends(get_current_user)):

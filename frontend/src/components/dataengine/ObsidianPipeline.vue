@@ -90,6 +90,40 @@
               {{ statusLabel(step.status) }}
             </span>
           </div>
+          <!-- Emoji Conversion Toggle (khusus emoji_conversion) -->
+          <div v-if="step.id === 'emoji_conversion'" class="flex items-center justify-between mt-2 pt-2 border-t border-slate-100">
+            <span class="text-[10px] font-bold text-slate-400">😀 Konversi Emoji</span>
+            <button
+              @click="crawlStore.convertEmoji = !crawlStore.convertEmoji"
+              type="button"
+              class="relative w-9 h-5 rounded-full transition-colors duration-300 focus:outline-none"
+              :class="crawlStore.convertEmoji ? 'bg-indigo-500' : 'bg-slate-200'"
+            >
+              <span
+                class="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-transform duration-300"
+                :class="crawlStore.convertEmoji ? 'translate-x-4' : 'translate-x-0'"
+              ></span>
+            </button>
+          </div>
+          <!-- Filter Language Toggle (khusus cleansing) -->
+          <div v-if="step.id === 'cleansing'" class="flex items-center justify-between mt-2 pt-2 border-t border-slate-100">
+            <span class="text-[10px] font-bold text-slate-400">🌐 Filter bahasa non-Indonesia</span>
+            <button
+              @click="crawlStore.filterLang = !crawlStore.filterLang"
+              type="button"
+              class="relative w-9 h-5 rounded-full transition-colors duration-300 focus:outline-none"
+              :class="crawlStore.filterLang ? 'bg-indigo-500' : 'bg-slate-200'"
+            >
+              <span
+                class="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-transform duration-300"
+                :class="crawlStore.filterLang ? 'translate-x-4' : 'translate-x-0'"
+              ></span>
+            </button>
+          </div>
+          <!-- Filtered count info -->
+          <div v-if="step.id === 'cleansing' && pipelineMeta[step.id]?.total_filtered > 0" class="flex items-center gap-1.5 mt-1">
+            <span class="text-[10px] text-rose-500 font-bold">🗑️ {{ pipelineMeta[step.id].total_filtered }} komentar non-Indonesia difilter</span>
+          </div>
         </div>
 
         <!-- Right Side Indicator -->

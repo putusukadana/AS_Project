@@ -10,6 +10,9 @@ from database import db
 from models import ProcessedData
 from Sastrawi.StopWordRemover.StopWordRemoverFactory import StopWordRemoverFactory
 from Sastrawi.Stemmer.StemmerFactory import StemmerFactory
+from langdetect import detect, DetectorFactory, lang_detect_exception
+
+DetectorFactory.seed = 0
 
 # --- Inisialisasi Kamus & Stopword ---
 
@@ -80,6 +83,10 @@ def konversi_emoji(teks: str) -> str:
     if not isinstance(teks, str): return ""
     return emoji.demojize(teks, language='id')
 
+def hapus_emoji(teks: str) -> str:
+    if not isinstance(teks, str): return ""
+    return emoji.replace_emoji(teks, '')
+
 def normalisasi_slang(teks: str) -> str:
     if not isinstance(teks, str):
         return ""
@@ -124,25 +131,61 @@ def _pipeline_meta():
     )
     return {"total_videos": total_videos, "total_comments": total_comments}
 
-async def run_emoji_conversion():
+async def run_emoji_conversion(convert_emoji: bool = True):
     try:
         for video in _current_data:
             if 'comment_sample' in video:
                 for comment in video['comment_sample']:
                     if 'text' in comment:
-                        comment['text'] = konversi_emoji(comment['text'])
+                        if convert_emoji:
+                            comment['text'] = konversi_emoji(comment['text'])
+                        else:
+                            comment['text'] = hapus_emoji(comment['text'])
         return {"status": "done", "step": "emoji_conversion", "data": _current_data, "meta": _pipeline_meta()}
     except Exception as e:
         return {"status": "error", "step": "emoji_conversion", "message": str(e)}
 
-async def run_cleansing():
+def filter_non_indonesian(data, filter_lang=True):
+    if not filter_lang:
+        return data, 0, {}
+
+    total_filtered = 0
+    lang_counts = {}
+
+    for video in data:
+        if "comment_sample" not in video:
+            continue
+        for comment in video["comment_sample"][:]:
+            text = (comment.get("raw_text") or comment.get("text", "")).strip()
+            if len(text) < 10:
+                continue
+            try:
+                lang = detect(text)
+                lang_counts[lang] = lang_counts.get(lang, 0) + 1
+                if lang != "id":
+                    video["comment_sample"].remove(comment)
+                    total_filtered += 1
+            except Exception:
+                pass
+
+    return data, total_filtered, lang_counts
+
+async def run_cleansing(filter_lang: bool = True):
     try:
         for video in _current_data:
             if 'comment_sample' in video:
                 for comment in video['comment_sample']:
                     if 'text' in comment:
                         comment['text'] = clean_text(comment['text'])
-        return {"status": "done", "step": "cleansed", "data": _current_data, "meta": _pipeline_meta()}
+
+        filtered_data, total_filtered, lang_counts = filter_non_indonesian(_current_data, filter_lang)
+
+        meta = _pipeline_meta()
+        meta["total_filtered"] = total_filtered
+        meta["lang_filter"] = lang_counts
+        meta["lang_filter_active"] = filter_lang
+
+        return {"status": "done", "step": "cleansed", "data": _current_data, "meta": meta}
     except Exception as e:
         return {"status": "error", "step": "cleansed", "message": str(e)}
 

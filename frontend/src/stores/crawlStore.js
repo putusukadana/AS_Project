@@ -18,6 +18,8 @@ export const useCrawlStore = defineStore("crawl", () => {
   const analyzedData = ref([]);
   const pipelineMeta = ref({});
   const keywords = ref({ overall: [], by_label: {} });
+  const filterLang = ref(true);
+  const convertEmoji = ref(true);
 
   const uploadFile = async ({ file, onStatus, signal }) => {
     onStatus({ type: "info", message: `📁 Mengupload file: ${file.name} (${(file.size / 1024).toFixed(1)} KB)` });
@@ -110,7 +112,8 @@ export const useCrawlStore = defineStore("crawl", () => {
       if (onStatus) onStatus({ type: "info", message: `⚙️ Menjalankan ${displayStep}...` });
       
       try {
-        const res = await api.post(`/pipeline/${step}`);
+        const params = step === 'emoji_conversion' ? { convert_emoji: convertEmoji.value } : step === 'cleansing' ? { filter_lang: filterLang.value } : {};
+        const res = await api.post(`/pipeline/${step}`, null, { params });
         
         if (res.data && res.data.status === "error") {
           pipelineStatus.value[step] = "error";
@@ -206,5 +209,7 @@ export const useCrawlStore = defineStore("crawl", () => {
     retryStep,
     runSentimentAnalysis,
     fetchKeywords,
+    filterLang,
+    convertEmoji,
   };
 });

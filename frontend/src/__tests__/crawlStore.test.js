@@ -94,4 +94,55 @@ describe('crawlStore', () => {
     await store.retryStep('emoji_conversion', onStatus);
     expect(store.pipelineStatus.emoji_conversion).toBe('done');
   });
+
+  it('convertEmoji should default to true', () => {
+    const store = useCrawlStore();
+    expect(store.convertEmoji).toBe(true);
+  });
+
+  it('convertEmoji should toggle correctly', () => {
+    const store = useCrawlStore();
+    expect(store.convertEmoji).toBe(true);
+    store.convertEmoji = false;
+    expect(store.convertEmoji).toBe(false);
+    store.convertEmoji = true;
+    expect(store.convertEmoji).toBe(true);
+  });
+
+  it('runPipeline should send convert_emoji=true when toggle is on', async () => {
+    api.post.mockReset();
+    api.post.mockResolvedValue({
+      data: { status: 'done', data: [{ id: 1 }], meta: { total_comments: 10, total_videos: 2 } },
+    });
+
+    const store = useCrawlStore();
+    store.convertEmoji = true;
+    store.rawData = [{ id: 1 }];
+    store.stats = { total: 1, quality: 80 };
+
+    await store.runPipeline(vi.fn());
+
+    const callArgs = api.post.mock.calls.find(([url]) => url === '/pipeline/emoji_conversion');
+    expect(callArgs).toBeDefined();
+    expect(callArgs[1]).toBeNull();
+    expect(callArgs[2].params).toEqual({ convert_emoji: true });
+  });
+
+  it('runPipeline should send convert_emoji=false when toggle is off', async () => {
+    api.post.mockReset();
+    api.post.mockResolvedValue({
+      data: { status: 'done', data: [{ id: 1 }], meta: { total_comments: 10, total_videos: 2 } },
+    });
+
+    const store = useCrawlStore();
+    store.convertEmoji = false;
+    store.rawData = [{ id: 1 }];
+    store.stats = { total: 1, quality: 80 };
+
+    await store.runPipeline(vi.fn());
+
+    const callArgs = api.post.mock.calls.find(([url]) => url === '/pipeline/emoji_conversion');
+    expect(callArgs).toBeDefined();
+    expect(callArgs[2].params).toEqual({ convert_emoji: false });
+  });
 });
