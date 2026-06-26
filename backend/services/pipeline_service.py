@@ -1,4 +1,6 @@
 import re
+import json
+import os
 import emoji
 import pandas as pd
 
@@ -19,9 +21,43 @@ try:
 except Exception as e:
     print(f"Peringatan: Gagal memuat kamus alay dari URL. Error: {e}")
     slang_dict = {}
-# 3. Sastrawi Stopword Remover
+
+# 2. Stopword Tambahan dari File JSON
+try:
+    stopword_json_path = os.path.join(
+        os.path.dirname(__file__), '..', 'resources', 'stopword', 'stopword_tambahan.json'
+    )
+    with open(stopword_json_path, 'r', encoding='utf-8') as f:
+        stopword_data = json.load(f)
+
+    stopword_tambahan = set()
+    for kategori, kata_list in stopword_data.items():
+        if isinstance(kata_list, list):
+            for kata in kata_list:
+                if isinstance(kata, str) and kata.strip():
+                    stopword_tambahan.add(kata.strip().lower())
+
+    print(f"Berhasil memuat {len(stopword_tambahan)} stopword tambahan dari JSON.")
+except FileNotFoundError:
+    print("Peringatan: File stopword tambahan tidak ditemukan.")
+    stopword_tambahan = set()
+except json.JSONDecodeError as e:
+    print(f"Peringatan: Format JSON stopword tambahan tidak valid. Error: {e}")
+    stopword_tambahan = set()
+except Exception as e:
+    print(f"Peringatan: Gagal memuat stopword tambahan. Error: {e}")
+    stopword_tambahan = set()
+
+# 3. Sastrawi Stopword Remover (dengan stopword tambahan)
 factory = StopWordRemoverFactory()
-stopword_remover = factory.create_stop_word_remover()
+default_stopwords = set(factory.get_stop_words())
+combined_stopwords = default_stopwords | stopword_tambahan
+
+from Sastrawi.StopWordRemover.StopWordRemover import StopWordRemover
+from Sastrawi.Dictionary.ArrayDictionary import ArrayDictionary
+
+dictionary = ArrayDictionary(list(combined_stopwords))
+stopword_remover = StopWordRemover(dictionary)
 
 # 4. Sastrawi Stemmer
 factory_stemmer = StemmerFactory()
@@ -36,6 +72,7 @@ def clean_text(teks: str) -> str:
     teks = re.sub(r'#\w+', '', teks)
     teks = re.sub(r'@\w+', '', teks)
     teks = re.sub(r'\W+', ' ', teks)
+    teks = re.sub(r'\b\d+\b', '', teks)
     teks = re.sub(r'\s+', ' ', teks).strip()
     return teks
 

@@ -89,36 +89,40 @@
 
     <!-- Rentang Waktu -->
     <div class="mt-8 space-y-3" v-if="extractionMode !== 'upload'" :class="{ 'opacity-30 pointer-events-none': extractionMode === 'url' }">
-      <label class="block text-sm font-bold text-slate-500 uppercase tracking-wider">Rentang Waktu</label>
-      <div class="grid grid-cols-2 gap-4">
-        <div class="space-y-1.5">
-          <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest pl-1">Dari</span>
-          <input
-            v-model="startDate"
-            type="date"
-            class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 outline-none focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all text-sm font-medium"
-          />
-        </div>
-        <div class="space-y-1.5">
-          <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest pl-1">Hingga</span>
-          <input
-            v-model="endDate"
-            type="date"
-            class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 outline-none focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all text-sm font-medium"
-          />
-        </div>
-      </div>
+      <label class="block text-sm font-bold text-slate-500 uppercase tracking-wider"> 🗓️ Rentang Waktu</label>
+      <div class="[&_.p-datepicker-input]:!bg-slate-50 [&_.p-datepicker-input]:!rounded-xl [&_.p-datepicker-input]:!border-slate-200 [&_.p-datepicker-input]:!text-slate-900 [&_.p-datepicker-input]:!placeholder:text-slate-400 [&_.p-datepicker-input]:!outline-none [&_.p-datepicker-input]:focus:bg-white [&_.p-datepicker-input]:focus:border-indigo-500 [&_.p-datepicker-input]:focus:ring-4 [&_.p-datepicker-input]:focus:ring-indigo-500/10 [&_.p-datepicker-input]:transition-all [&_.p-datepicker-input]:font-medium">
+      <DatePicker v-model="dates" selectionMode="range" :manualInput="false" showIcon iconDisplay="input" />
+    </div>
     </div>
 
+
     <!-- Tombol Aksi -->
+    <div v-if="isCrawling || isUploading" class="flex gap-3 mt-8">
+      <button
+        class="flex-1 p-4 bg-indigo-600 text-white rounded-xl font-bold cursor-not-allowed opacity-50"
+        disabled
+      >
+        <span class="animate-spin mr-2 inline-block">⏳</span>
+        {{ isUploading ? "Memproses File..." : "Crawling Data..." }}
+      </button>
+      <button
+        class="px-6 py-4 bg-white text-rose-600 border-2 border-rose-200 rounded-xl font-bold hover:bg-rose-50 hover:border-rose-300 transition-all active:scale-95"
+        @click="confirmCancel"
+      >
+        ✕ Batal
+      </button>
+    </div>
     <button
+      v-else
       class="w-full p-4 bg-indigo-600 text-white rounded-xl font-bold mt-8 shadow-lg shadow-indigo-100 hover:bg-indigo-700 hover:-translate-y-0.5 transition-all active:scale-95 disabled:opacity-50 disabled:translate-y-0 disabled:shadow-none"
       :disabled="!canCrawl || isCrawling || isUploading"
       @click="startCrawl"
     >
-      <span v-if="isCrawling || isUploading" class="animate-spin mr-2 inline-block">⏳</span>
-      {{ isUploading ? "Memproses File..." : isCrawling ? "Crawling Data..." : extractionMode === 'upload' ? "📁 Mulai Proses File" : "🚀 Mulai Crawling" }}
+      {{ extractionMode === 'upload' ? "📁 Mulai Proses File" : "🚀 Mulai Crawling" }}
     </button>
+
+    <!-- Confirm Dialog -->
+    <ConfirmDialog />
 
     <!-- Status Crawling Real-time -->
     <div v-if="crawlStatus.length > 0" class="mt-8">
@@ -142,6 +146,9 @@
 <script setup>
 import { ref, computed } from "vue";
 import { useCrawlStore } from "@/stores/crawlStore";
+import DatePicker from "primevue/datepicker";
+import ConfirmDialog from "primevue/confirmdialog";
+import { useConfirm } from "primevue/useconfirm";
 import { useToast } from "primevue/usetoast";
 import KeywordForm from "./KeywordForm.vue";
 import UrlForm from "./UrlForm.vue";
@@ -161,8 +168,7 @@ const platforms = [
 const extractionMode = ref("keyword"); // 'keyword' | 'url' | 'upload'
 const selectedPlatforms = ref(["tiktok"]);
 const keyword = ref("");
-const startDate = ref("");
-const endDate = ref("");
+const dates = ref(null);
 const isCrawling = ref(false);
 const crawlStatus = ref([]);
 const uploadedFile = ref(null);
@@ -183,6 +189,23 @@ const togglePlatform = (id) => {
 const formatNow = () => new Date().toLocaleTimeString('id-ID', { hour12: false });
 
 const isUploading = ref(false);
+const confirm = useConfirm();
+const abortController = ref(null);
+
+const confirmCancel = () => {
+  confirm.require({
+    message: 'Apakah Anda yakin ingin membatalkan crawling?',
+    header: 'Konfirmasi Pembatalan',
+    icon: 'pi pi-exclamation-triangle',
+    rejectLabel: 'Tidak',
+    acceptLabel: 'Iya',
+    accept: () => {
+      if (abortController.value) {
+        abortController.value.abort();
+      }
+    }
+  });
+};
 
 const handleFileDrop = (event) => {
   isDragOver.value = false;
@@ -219,6 +242,9 @@ const validateAndSetFile = (file) => {
 const startCrawl = async () => {
   if (!canCrawl.value || isCrawling.value) return;
 
+  abortController.value = new AbortController();
+  const signal = abortController.value.signal;
+
   // Mode Upload
   if (extractionMode.value === "upload") {
     isUploading.value = true;
@@ -226,12 +252,14 @@ const startCrawl = async () => {
     try {
       await crawlStore.uploadFile({
         file: uploadedFile.value,
+        signal,
         onStatus: (log) => {
           crawlStatus.value.push(log);
         },
       });
     } finally {
       isUploading.value = false;
+      abortController.value = null;
     }
     return;
   }
@@ -243,14 +271,16 @@ const startCrawl = async () => {
       platforms: extractionMode.value === 'url' ? ['tiktok'] : selectedPlatforms.value,
       keyword: keyword.value,
       video_limit: videoLimit.value,
-      start_date: (extractionMode.value === 'keyword' && startDate.value) ? new Date(startDate.value).toISOString() : null,
-      end_date: (extractionMode.value === 'keyword' && endDate.value) ? new Date(endDate.value).toISOString() : null,
+      start_date: (extractionMode.value === 'keyword' && dates.value?.[0]) ? dates.value[0].toISOString() : null,
+      end_date: (extractionMode.value === 'keyword' && dates.value?.[1]) ? dates.value[1].toISOString() : null,
+      signal,
       onStatus: (log) => {
         crawlStatus.value.push(log);
       },
     });
   } finally {
     isCrawling.value = false;
+    abortController.value = null;
   }
 };
 

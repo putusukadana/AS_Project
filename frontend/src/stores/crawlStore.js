@@ -19,7 +19,7 @@ export const useCrawlStore = defineStore("crawl", () => {
   const pipelineMeta = ref({});
   const keywords = ref({ overall: [], by_label: {} });
 
-  const uploadFile = async ({ file, onStatus }) => {
+  const uploadFile = async ({ file, onStatus, signal }) => {
     onStatus({ type: "info", message: `📁 Mengupload file: ${file.name} (${(file.size / 1024).toFixed(1)} KB)` });
     try {
       const formData = new FormData();
@@ -27,6 +27,7 @@ export const useCrawlStore = defineStore("crawl", () => {
 
       const res = await api.post("/upload/file", formData, {
         headers: { "Content-Type": "multipart/form-data" },
+        signal,
       });
 
       if (res.data.status === "error") {
@@ -51,11 +52,15 @@ export const useCrawlStore = defineStore("crawl", () => {
 
       await runPipeline(onStatus);
     } catch (err) {
+      if (err.name === 'CanceledError' || err.code === 'ERR_CANCELED') {
+        onStatus({ type: "info", message: "⏹️ Crawling dibatalkan" });
+        return;
+      }
       onStatus({ type: "error", message: `❌ Upload gagal: ${err.message}` });
     }
   };
 
-  const startCrawl = async ({ platforms, keyword, video_limit, start_date, end_date, onStatus }) => {
+  const startCrawl = async ({ platforms, keyword, video_limit, start_date, end_date, onStatus, signal }) => {
     onStatus({ type: "info", message: `🚀 Memulai crawl untuk: "${keyword}" (Video limit: ${video_limit || 'Semua'})` });
     try {
       // Endpoint: /api/v1/crawl/start
@@ -65,7 +70,7 @@ export const useCrawlStore = defineStore("crawl", () => {
         video_limit: video_limit || 0,
         start_date: start_date || null,
         end_date: end_date || null
-      });
+      }, { signal });
       rawData.value = res.data.data;
       stats.value = { total: res.data.total, quality: res.data.signal_quality };
       pipelineMeta.value = {};
@@ -84,6 +89,10 @@ export const useCrawlStore = defineStore("crawl", () => {
       // Otomatis jalankan pipeline
       await runPipeline(onStatus);
     } catch (err) {
+      if (err.name === 'CanceledError' || err.code === 'ERR_CANCELED') {
+        onStatus({ type: "info", message: "⏹️ Crawling dibatalkan" });
+        return;
+      }
       onStatus({ type: "error", message: `❌ Gagal: ${err.message}` });
     }
   };

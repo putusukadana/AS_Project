@@ -1,0 +1,6 @@
+buatkan issue.md yang isi perencanaan untuk nanti di implementasikan oleh junior programer atau ai yang lebih murah
+
+pada file pipeline_service.py pada backend dibagian stopword remover tambahkan data dari file json C:\Users\User\webAS\AS_Project\backend\resources\stopword\stopword_tambahan.json sebagai data tambahan untuk melakukan stopword remover
+
+
+jelaskan tahapan-tahapan yang harus dilakukan untuk diimplementasikan fitur ini, anggap nanti yang mengimplementasikan adalah junior programer atau model ai yang lebih murah

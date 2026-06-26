@@ -14,7 +14,7 @@
           <!-- Header Section -->
           <div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
             <div>
-              <h1 class="text-4xl font-black text-slate-900 tracking-tight">TikTok Scraper & NLP Pipeline</h1>
+              <h1 class="text-4xl font-black text-slate-900 tracking-tight"> Scraper Tools & NLP Pipeline</h1>
               <p class="text-slate-500 mt-2 font-medium max-w-2xl">
                 Alat ekstraksi data multi-platform yang terintegrasi dengan pipeline pemrosesan bahasa alami "Obsidian" 
                 untuk analisis emosi dan sentimen real-time.
