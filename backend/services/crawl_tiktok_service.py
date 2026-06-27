@@ -171,6 +171,7 @@ async def extract_tiktok_data(
                             "post_url": post_url,
                             "video_id": video_id,
                             "author_unique_id": author_unique_id,
+                            "description": description,
                             "comment_count": int(comment_count),
                             "estimated_size_kb": round(float(comment_count) * 0.15, 2),
                         }
@@ -185,6 +186,9 @@ async def extract_tiktok_data(
                                 video_info["comment_sample"] = []
                         else:
                             video_info["comment_sample"] = []
+                        
+                        video_info["comment_count"] = len(video_info["comment_sample"])
+                        video_info["estimated_size_kb"] = round(len(video_info["comment_sample"]) * 0.15, 2)
                         
                         unique_video_ids.add(video_id)
                         collected_videos.append(video_info)

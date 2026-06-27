@@ -21,9 +21,10 @@
           <tr class="text-left border-b-2 border-slate-50">
             <th class="pb-3 text-[11px] font-black text-slate-400 uppercase tracking-widest">Platform</th>
             <th class="pb-3 text-[11px] font-black text-slate-400 uppercase tracking-widest text-center">Total Komentar</th>
-            <th class="pb-3 text-[11px] font-black text-slate-400 uppercase tracking-widest text-center">Total Video</th>
+            <th class="pb-3 text-[11px] font-black text-slate-400 uppercase tracking-widest text-center">Total Source</th>
             <th class="pb-3 text-[11px] font-black text-slate-400 uppercase tracking-widest text-center">Size Ekstraksi</th>
-            <th class="pb-3 text-[11px] font-black text-slate-400 uppercase tracking-widest text-right">Preview Data</th>
+            <th class="pb-3 text-[11px] font-black text-slate-400 uppercase tracking-widest text-center">Preview Source</th>
+            <th class="pb-3 text-[11px] font-black text-slate-400 uppercase tracking-widest text-right">Preview Komentar</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-slate-50">
@@ -56,6 +57,16 @@
               <span class="text-[11px] font-mono font-bold text-slate-400 group-hover:text-slate-600">
                 {{ (summary.totalSize / 1024).toFixed(2) }} MB
               </span>
+            </td>
+            <td class="py-4 text-center">
+              <button
+                v-if="summary.sources.length > 0"
+                @click="openPreviewSource(summary)"
+                class="text-[11px] font-bold text-indigo-500 hover:text-indigo-700 hover:underline transition-colors flex items-center gap-1 mx-auto"
+              >
+                Lihat Source ↗
+              </button>
+              <span v-else class="text-[10px] text-slate-300 italic font-medium">No source</span>
             </td>
             <td class="py-4 text-right">
               <button
@@ -91,7 +102,8 @@ const summaries = computed(() => {
         totalVideos: 0,
         totalComments: 0,
         totalSize: 0,
-        sampleComments: []
+        sampleComments: [],
+        sources: []
       };
     }
     groups[p].totalVideos++;
@@ -99,6 +111,20 @@ const summaries = computed(() => {
     groups[p].totalSize += (row.estimated_size_kb || 0);
     if (groups[p].sampleComments.length === 0 && row.comment_sample?.length > 0) {
       groups[p].sampleComments = row.comment_sample;
+    }
+    if (row.platform === 'upload') {
+      const match = row.description?.match(/file:\s*(.+)$/i);
+      const caption = match ? match[1] : row.video_id || 'Unknown file';
+      if (!groups[p].sources.some(s => s.caption === caption)) {
+        groups[p].sources.push({ account: '-', caption, link: null, type: 'file' });
+      }
+    } else if (row.post_url) {
+      groups[p].sources.push({
+        account: row.nickname || row.author_unique_id || 'Unknown',
+        caption: row.description || '',
+        link: row.post_url,
+        type: 'video'
+      });
     }
   });
   return Object.values(groups);
@@ -167,6 +193,62 @@ const openPreview = (summary) => {
     </html>
   `;
   
+  const blob = new Blob([htmlContent], { type: 'text/html' });
+  const url = URL.createObjectURL(blob);
+  window.open(url, '_blank');
+};
+
+const openPreviewSource = (summary) => {
+  if (!summary.sources || summary.sources.length === 0) return;
+
+  const rowsHtml = summary.sources.map((s, i) => `
+    <tr style="border-bottom: 1px solid #f1f5f9;">
+      <td style="padding: 10px 12px; font-size: 12px; color: #64748b; text-align: center; font-weight: 600;">${i + 1}</td>
+      <td style="padding: 10px 12px; font-size: 12px; color: #1e293b;">${escapeHTML(s.account)}</td>
+      <td style="padding: 10px 12px; font-size: 12px; color: #475569;">${escapeHTML(s.caption)}</td>
+      <td style="padding: 10px 12px; font-size: 12px; color: #6366f1;">${s.link ? `<a href="${escapeHTML(s.link)}" target="_blank" style="color: #6366f1; text-decoration: underline;">${escapeHTML(s.link)}</a>` : '<span style="color: #94a3b8;">-</span>'}</td>
+    </tr>
+  `).join('');
+
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>Preview Source - ${summary.platform}</title>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+        <style>
+          body { font-family: 'Inter', sans-serif; background: #f8fafc; color: #1e293b; padding: 40px; margin: 0; line-height: 1.5; }
+          .container { max-width: 800px; margin: 0 auto; background: white; border-radius: 20px; box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1); overflow: hidden; border: 1px solid #e2e8f0; }
+          .header { padding: 32px; background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: white; }
+          .header h1 { margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.025em; }
+          .header p { margin: 8px 0 0; opacity: 0.6; font-size: 13px; font-weight: 500; }
+          table { width: 100%; border-collapse: collapse; }
+          th { background: #f8fafc; text-align: left; padding: 12px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; border-bottom: 2px solid #f1f5f9; font-weight: 800; }
+          .label { font-size: 10px; font-weight: 900; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>Preview Source - ${summary.platform}</h1>
+            <p>${summary.sources.length} source${summary.sources.length > 1 ? 's' : ''} digunakan</p>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th style="text-align: center; width: 60px;">No</th>
+                <th style="width: 160px;">Nama Akun</th>
+                <th>Caption</th>
+                <th>Link Video</th>
+              </tr>
+            </thead>
+            <tbody>${rowsHtml}</tbody>
+          </table>
+        </div>
+      </body>
+    </html>
+  `;
+
   const blob = new Blob([htmlContent], { type: 'text/html' });
   const url = URL.createObjectURL(blob);
   window.open(url, '_blank');

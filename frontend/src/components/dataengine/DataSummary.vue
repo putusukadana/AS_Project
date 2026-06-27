@@ -10,11 +10,11 @@
       <div class="grid grid-cols-3 gap-4">
         <div class="bg-slate-50 rounded-2xl p-4 border border-slate-100 text-center">
           <span class="text-2xl font-black text-indigo-600">{{ pipelineMeta.stemming?.total_videos ?? 0 }}</span>
-          <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Total Video</p>
+          <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Total Source</p>
         </div>
         <div class="bg-slate-50 rounded-2xl p-4 border border-slate-100 text-center">
           <span class="text-2xl font-black text-emerald-600">{{ pipelineMeta.stemming?.total_comments ?? 0 }}</span>
-          <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Komentar Tersimpan</p>
+          <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Total Komentar</p>
         </div>
         <div class="bg-slate-50 rounded-2xl p-4 border border-slate-100 text-center">
           <span class="text-2xl font-black text-amber-600">{{ pipelineMeta.stemming?.total_filtered ?? 0 }}</span>

@@ -120,6 +120,8 @@ def parse_uploaded_file(file_bytes: bytes, filename: str) -> Dict[str, Any]:
         "video_id": f"upload_{int(time.time())}",
         "platform": "upload",
         "description": f"Data upload dari file: {filename}",
+        "comment_count": len(comment_sample),
+        "estimated_size_kb": round(len(comment_sample) * 0.15, 2),
         "comment_sample": comment_sample
     }
 
